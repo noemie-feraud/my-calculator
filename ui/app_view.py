@@ -20,6 +20,11 @@ class AppView:
         ctk.set_appearance_mode("System")
         ctk.set_default_color_theme("blue")
 
+        # --- Echelle globale (UI plus grande)
+        ctk.set_widget_scaling(2.0)   # taille des widgets (boutons, labels, etc.)
+        ctk.set_window_scaling(1.9)   # scaling global de la fenêtre
+
+
         self.window = ctk.CTk()
         self.window.title("Pascaline - Calculatrice")
         self.window.geometry("900x520")
@@ -150,6 +155,7 @@ class AppView:
                     self.btn_backspace = btn
                 elif label == "=":
                     self.btn_equals = btn
+                    self.btn_equals.configure(fg_color="dark green", hover_color="#345c3e")
 
         # Bouton SCI (toggle)
         self.btn_sci_toggle = ctk.CTkButton(self.standard_frame, text="SCI", width=70, height=45)

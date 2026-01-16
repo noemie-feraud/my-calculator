@@ -1,4 +1,4 @@
-# Pascaline — Calculatrice (Standard + Scientifique) en CustomTkinter
+# Pascaline — Calculatrice en CustomTkinter
 
 **Pascaline** est une calculatrice GUI en Python avec **CustomTkinter**.  
 Objectifs du projet : une appli **simple à expliquer**, robuste côté erreurs, avec un vrai moteur d’évaluation **sans `eval()`** et **sans `math`**.
@@ -77,11 +77,11 @@ Si tu tapes un **chiffre** après `=` → nouvelle expression
 Si tu tapes un **opérateur** après `=` → continue le calcul à partir du dernier résultat
 
 
-## Règles de validation (ce que l’app empêche)
+## Règles de validation 
 
-**Quelques règles (pour éviter les expressions impossibles) :**
+**Quelques règles pour éviter les expressions impossibles :**
 
-* Pas deux opérateurs d’affilée (`+``*`, `-``-` est géré comme moins unaire selon le contexte)
+* Pas deux opérateurs d’affilée (`+*`, `--` est géré comme moins unaire selon le contexte)
 
 * Parenthèses cohérentes et équilibrées
 
@@ -94,7 +94,7 @@ Si tu tapes un **opérateur** après `=` → continue le calcul à partir du der
 * Fonctions `sqrt(` / `abs(` / `inv(` seulement si c’est logique (pas collées à un nombre sans opérateur)
 
 
-## Comment ça marche (moteur de calcul)
+## Comment fonctionne le moteur de calcul
 
 **L’évaluation se fait en 3 étapes (classique et expliquable) :**
 
