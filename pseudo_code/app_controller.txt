@@ -1,0 +1,275 @@
+from domain.validation import validate_button_action, validate_expression_final
+from domain.engine import evaluate_expression
+from domain.formatting import format_result
+from domain.history import history_add, history_clear, history_select
+from domain.memory import memory_clear, memory_recall, memory_add, memory_sub
+from models.errors import get_message
+
+
+fonction create_controller(initial_state, ui):
+    controller.state = initial_state
+    controller.ui = ui
+    retourner controller
+
+
+fonction apply_and_render(controller, new_state):
+    controller.state = new_state
+    render(controller.ui, controller.state)
+
+
+fonction set_error(state, error_code):
+    state.message_text = get_message(error_code)
+    state.message_type = "error"
+    state.error_mode = True
+    retourner state
+
+
+fonction clear_message(state):
+    state.message_text = ""
+    state.message_type = ""
+    retourner state
+
+
+fonction handle_digit(controller, digit):
+    state = controller.state
+
+    # règle : si on était en erreur, repartir propre
+    si state.error_mode == True:
+        state = clear_entry_keep_history_memory(state)
+
+    # règle : après résultat, un chiffre démarre une nouvelle expression
+    si state.after_result == True:
+        state = clear_entry_keep_history_memory(state)
+
+    token = digit sous forme texte
+
+    (ok, error_code) = validate_button_action(state.expression_text, token)
+
+    si ok == False:
+        state = set_error(state, error_code)
+        apply_and_render(controller, state)
+        retourner
+
+    state.expression_text = state.expression_text + token
+    state.display_text = state.expression_text
+    state = clear_message(state)
+
+    state.after_result = False
+    state.recall_history = False
+
+    apply_and_render(controller, state)
+
+
+fonction handle_operator(controller, op):
+    state = controller.state
+
+    si state.error_mode == True:
+        apply_and_render(controller, state)
+        retourner
+
+    # après résultat : permettre l’enchaînement à partir du résultat
+    si state.after_result == True:
+        si state.last_result_text est vide:
+            state = set_error(state, "NO_LAST_RESULT")
+            apply_and_render(controller, state)
+            retourner
+        sinon:
+            state.expression_text = state.last_result_text
+            state.after_result = False
+
+    (ok, error_code) = validate_button_action(state.expression_text, op)
+    si ok == False:
+        state = set_error(state, error_code)
+        apply_and_render(controller, state)
+        retourner
+
+    state.expression_text = state.expression_text + op
+    state.display_text = state.expression_text
+    state = clear_message(state)
+
+    apply_and_render(controller, state)
+
+
+fonction handle_decimal(controller):
+    appeler handle_token_simple(controller, ".")
+
+
+fonction handle_parenthesis(controller, par):
+    appeler handle_token_simple(controller, par)
+
+
+fonction handle_scientific_token(controller, token):
+    state = controller.state
+
+    si state.error_mode == True:
+        apply_and_render(controller, state)
+        retourner
+
+    si token == "^2":
+        # se comporte comme ajouter "^2" (sans parenthèses)
+        token_to_add = "^2"
+    sinon si token == "^3":
+        token_to_add = "^3"
+    sinon:
+        token_to_add = token
+
+    appeler handle_token_simple(controller, token_to_add)
+
+
+fonction handle_token_simple(controller, token):
+    state = controller.state
+
+    # si after_result et token est un chiffre => nouvelle expression
+    # ici token n’est pas forcément un chiffre, donc règles spéciales :
+    # - si token est opérateur => enchaînement (géré ailleurs)
+    # - sinon (parenthèse, fonction, etc.) : repartir sur une nouvelle expression
+    si state.after_result == True ET token n’est pas dans {"+","-","*","/","%","^"}:
+        state = clear_entry_keep_history_memory(state)
+
+    (ok, error_code) = validate_button_action(state.expression_text, token)
+
+    si ok == False:
+        state = set_error(state, error_code)
+        apply_and_render(controller, state)
+        retourner
+
+    state.expression_text = state.expression_text + token
+    state.display_text = state.expression_text
+    state = clear_message(state)
+
+    state.after_result = False
+    state.recall_history = False
+
+    apply_and_render(controller, state)
+
+
+fonction handle_backspace(controller):
+    state = controller.state
+
+    si state.error_mode == True:
+        state = clear_entry_keep_history_memory(state)
+        apply_and_render(controller, state)
+        retourner
+
+    si state.expression_text est vide:
+        apply_and_render(controller, state)
+        retourner
+
+    supprimer le dernier caractère de state.expression_text
+    state.display_text = state.expression_text
+    state = clear_message(state)
+
+    apply_and_render(controller, state)
+
+
+fonction handle_clear(controller):
+    state = controller.state
+    state = clear_entry_keep_history_memory(state)
+    apply_and_render(controller, state)
+
+
+fonction clear_entry_keep_history_memory(state):
+    state.expression_text = ""
+    state.display_text = ""
+    state.message_text = ""
+    state.message_type = ""
+    state.error_mode = False
+    state.after_result = False
+    state.recall_history = False
+    # ne pas toucher history_items
+    # ne pas toucher memory_value
+    retourner state
+
+
+fonction handle_equals(controller):
+    state = controller.state
+
+    si state.error_mode == True:
+        apply_and_render(controller, state)
+        retourner
+
+    expr = state.expression_text
+
+    (ok, error_code) = validate_expression_final(expr)
+
+    si ok == False:
+        state = set_error(state, error_code)
+        apply_and_render(controller, state)
+        retourner
+
+    (success, value, engine_error_code) = evaluate_expression(expr)
+
+    si success == False:
+        state = set_error(state, engine_error_code)
+        apply_and_render(controller, state)
+        retourner
+
+    result_text = format_result(value)
+
+    state.last_result_value = value
+    state.last_result_text = result_text
+
+    state = history_add(state, expr, result_text, value)
+
+    state.expression_text = result_text
+    state.display_text = result_text
+
+    state.after_result = True
+    state.error_mode = False
+    state = clear_message(state)
+
+    apply_and_render(controller, state)
+
+
+fonction handle_history_click(controller, index):
+    state = controller.state
+
+    (state2, selected_expr) = history_select(state, index)
+
+    # si erreur index, state2 contiendra un message d’erreur
+    apply_and_render(controller, state2)
+
+
+fonction handle_history_clear(controller):
+    state = controller.state
+    state = history_clear(state)
+    apply_and_render(controller, state)
+
+
+fonction handle_memory_action(controller, action):
+    state = controller.state
+
+    si action == "MC":
+        state = memory_clear(state)
+
+    sinon si action == "MR":
+        (state, injected_text) = memory_recall(state)
+        si injected_text n’est pas vide:
+            # on réutilise la même logique qu’une saisie de nombre
+            (ok, error_code) = validate_button_action(state.expression_text, injected_text)
+            si ok == False:
+                state = set_error(state, error_code)
+            sinon:
+                state.expression_text = state.expression_text + injected_text
+                state.display_text = state.expression_text
+                state = clear_message(state)
+
+    sinon si action == "M+":
+        state = memory_add(state)   # ajoute une valeur calculée selon règles mémoire
+
+    sinon si action == "M-":
+        state = memory_sub(state)
+
+    apply_and_render(controller, state)
+
+
+fonction toggle_scientific_mode(controller):
+    state = controller.state
+    state.mode_scientifique = NON state.mode_scientifique
+    apply_and_render(controller, state)
+
+
+fonction handle_reset_all(controller):
+    # reset total (équivalent AC)
+    state = create_initial_state()
+    apply_and_render(controller, state)

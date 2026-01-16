@@ -1,0 +1,20 @@
+import customtkinter
+
+from models.app_state import create_initial_state
+from ui.app_view import create_ui, bind_buttons, render
+from controller.app_controller import create_controller
+
+
+fonction main():
+    # objectif : point d’entrée du programme (aucune logique métier ici)
+
+    state = create_initial_state()
+
+    ui = create_ui()                 # crée fenêtre + widgets (display, message, boutons, historique)
+    controller = create_controller(state, ui)
+
+    bind_buttons(ui, controller)     # connecter UNIQUEMENT les boutons (pas de clavier PC)
+
+    render(ui, state)                # rendu initial : écran vide, message vide, historique vide
+
+    lancer la boucle d’événements de l’UI (mainloop)

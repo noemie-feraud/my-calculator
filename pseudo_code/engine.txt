@@ -1,0 +1,213 @@
+fonction evaluate_expression(expr):
+    tokens = tokenize(expr)
+    si tokens == ERREUR:
+        retourner (False, None, "TOKEN_ERROR")
+
+    rpn = to_rpn(tokens)
+    si rpn == ERREUR:
+        retourner (False, None, "PARSE_ERROR")
+
+    (ok, value, err) = eval_rpn(rpn)
+    si ok == False:
+        retourner (False, None, err)
+
+    retourner (True, value, None)
+
+
+
+fonction tokenize(expr):
+    tokens = liste vide
+    i = 0
+
+    tant que i < longueur(expr):
+        c = expr[i]
+
+        si c est un espace:
+            i = i + 1
+            continuer
+
+        si c est un chiffre OU c == ".":
+            lire un nombre complet (chiffres + 1 seul point)
+            ajouter nombre à tokens
+            continuer
+
+        si c est un opérateur dans {+ - * / % ^}:
+            # gérer - unaire :
+            si c == "-" ET (tokens est vide OU dernier token est un opérateur OU dernier token == "(" ):
+                ajouter "u-" à tokens     # token spécial pour moins unaire
+            sinon:
+                ajouter c à tokens
+            i = i + 1
+            continuer
+
+        si c == "(" ou c == ")":
+            ajouter c à tokens
+            i = i + 1
+            continuer
+
+        si expr à partir de i commence par "sqrt(":
+            ajouter "sqrt" à tokens
+            ajouter "(" à tokens
+            i = i + longueur("sqrt(")
+            continuer
+
+        si expr à partir de i commence par "abs(":
+            ajouter "abs" à tokens
+            ajouter "(" à tokens
+            i = i + longueur("abs(")
+            continuer
+
+        si expr à partir de i commence par "inv(":
+            ajouter "inv" à tokens
+            ajouter "(" à tokens
+            i = i + longueur("inv(")
+            continuer
+
+        si c == "!":
+            ajouter "!" à tokens
+            i = i + 1
+            continuer
+
+        sinon:
+            retourner ERREUR
+
+    retourner tokens
+
+
+
+
+fonction precedence(op):
+    si op == "!" : retourner 5
+    si op == "u-": retourner 4
+    si op dans {"sqrt","abs","inv"} : retourner 4
+    si op == "^" : retourner 3
+    si op dans {"*","/","%"} : retourner 2
+    si op dans {"+","-"} : retourner 1
+    retourner 0
+
+fonction is_right_associative(op):
+    si op == "^": retourner True
+    si op == "u-": retourner True
+    retourner False
+
+
+fonction to_rpn(tokens):
+    output = liste vide
+    stack = pile vide
+
+    pour chaque token dans tokens:
+
+        si token est un nombre:
+            ajouter token à output
+
+        sinon si token est une fonction {"sqrt","abs","inv"}:
+            empiler token sur stack
+
+        sinon si token est un opérateur (y compris "u-" et "!"):
+            tant que stack non vide ET stack.top est un opérateur OU une fonction:
+                top = stack.top
+
+                si precedence(top) > precedence(token):
+                    ajouter stack.pop à output
+                    continuer
+
+                si precedence(top) == precedence(token) ET is_right_associative(token) == False:
+                    ajouter stack.pop à output
+                    continuer
+
+                arrêter la boucle
+
+            empiler token sur stack
+
+        sinon si token == "(":
+            empiler "(" sur stack
+
+        sinon si token == ")":
+            tant que stack non vide ET stack.top != "(":
+                ajouter stack.pop à output
+            si stack vide:
+                retourner ERREUR (parenthèses)
+            dépiler "("
+            si stack.top est une fonction:
+                ajouter stack.pop à output
+
+        sinon:
+            retourner ERREUR
+
+    tant que stack non vide:
+        si stack.top est "(" ou ")":
+            retourner ERREUR
+        ajouter stack.pop à output
+
+    retourner output
+
+
+
+fonction eval_rpn(rpn):
+    stack = pile vide
+
+    pour chaque token dans rpn:
+
+        si token est un nombre:
+            empiler valeur numérique(token)
+
+        sinon si token == "u-":
+            si stack a moins de 1 élément: retourner (False, None, "BAD_UNARY_MINUS")
+            a = stack.pop
+            empiler (-a)
+
+        sinon si token dans {"+","-","*","/","%","^"}:
+            si stack a moins de 2 éléments: retourner (False, None, "BAD_BINARY_OP")
+            b = stack.pop
+            a = stack.pop
+
+            si token == "+" : empiler (a + b)
+            si token == "-" : empiler (a - b)
+            si token == "*" : empiler (a * b)
+
+            si token == "/":
+                si b == 0: retourner (False, None, "DIV_ZERO")
+                empiler (a / b)
+
+            si token == "%":
+                appeler mod_int(a, b) -> soit résultat, soit erreur
+                si erreur: retourner (False, None, "MOD_ERROR")
+                empiler résultat
+
+            si token == "^":
+                appeler pow_int(a, b) -> soit résultat, soit erreur
+                si erreur: retourner (False, None, "POW_EXP_NOT_INT")
+                empiler résultat
+
+        sinon si token == "!":
+            si stack a moins de 1 élément: retourner (False, None, "FACTORIAL_NO_ARG")
+            a = stack.pop
+            appeler factorial_int(a) -> soit résultat, soit erreur
+            si erreur: retourner (False, None, "FACTORIAL_NOT_INT")
+            empiler résultat
+
+        sinon si token == "sqrt":
+            si stack a moins de 1 élément: retourner (False, None, "SQRT_NO_ARG")
+            a = stack.pop
+            appeler sqrt_newton(a)
+            si erreur: retourner (False, None, "SQRT_NEGATIVE")
+            empiler résultat
+
+        sinon si token == "abs":
+            si stack a moins de 1 élément: retourner (False, None, "ABS_NO_ARG")
+            a = stack.pop
+            empiler abs_value(a)
+
+        sinon si token == "inv":
+            si stack a moins de 1 élément: retourner (False, None, "INV_NO_ARG")
+            a = stack.pop
+            si a == 0: retourner (False, None, "INV_ZERO")
+            empiler inv_value(a)
+
+        sinon:
+            retourner (False, None, "UNKNOWN_TOKEN")
+
+    si stack n’a pas exactement 1 élément:
+        retourner (False, None, "EVAL_ERROR")
+
+    retourner (True, stack.pop, None)

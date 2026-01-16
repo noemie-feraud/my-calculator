@@ -1,0 +1,38 @@
+fonction memory_clear(state):
+    state.memory_value = 0.0
+    state.message_text = "Mémoire effacée."
+    state.message_type = "info"
+    retourner state
+
+
+fonction memory_recall(state):
+    # renvoie le texte à injecter comme si c’était un nombre
+    injected = format_result(state.memory_value)
+    state.message_text = "Mémoire rappelée."
+    state.message_type = "info"
+    retourner (state, injected)
+
+
+fonction memory_add(state):
+    # règle : si last_result existe, on l’utilise
+    si state.last_result_value est None:
+        state.message_text = "Impossible : aucun résultat à ajouter en mémoire."
+        state.message_type = "error"
+        retourner state
+
+    state.memory_value = state.memory_value + state.last_result_value
+    state.message_text = "Ajouté à la mémoire."
+    state.message_type = "info"
+    retourner state
+
+
+fonction memory_sub(state):
+    si state.last_result_value est None:
+        state.message_text = "Impossible : aucun résultat à soustraire de la mémoire."
+        state.message_type = "error"
+        retourner state
+
+    state.memory_value = state.memory_value - state.last_result_value
+    state.message_text = "Soustrait de la mémoire."
+    state.message_type = "info"
+    retourner state

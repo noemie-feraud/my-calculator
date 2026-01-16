@@ -1,0 +1,15 @@
+import un dictionnaire ERROR_MESSAGES (code -> message)
+
+fonction get_message(error_code, context=None):
+    # objectif : centraliser les messages
+
+    si error_code est dans ERROR_MESSAGES:
+        msg = ERROR_MESSAGES[error_code]
+
+        si context n’est pas None:
+            remplacer les placeholders dans msg avec context
+
+        retourner msg
+
+    sinon:
+        retourner "Erreur inconnue."

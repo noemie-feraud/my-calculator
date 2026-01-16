@@ -1,0 +1,20 @@
+fonction create_initial_state():
+    # objectif : créer un état initial cohérent pour éviter les variables globales
+
+    state.expression_text = ""
+    state.display_text = ""
+    state.message_text = ""
+    state.message_type = ""                # "info" ou "error" ou ""
+
+    state.error_mode = False
+    state.after_result = False
+    state.recall_history = False
+    state.mode_scientifique = False
+
+    state.last_result_value = None
+    state.last_result_text = ""
+
+    state.history_items = liste vide       # liste de HistoryItem
+    state.memory_value = 0.0
+
+    retourner state

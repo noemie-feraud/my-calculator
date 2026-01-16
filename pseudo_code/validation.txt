@@ -1,0 +1,93 @@
+fonction validate_button_action(expr, token):
+    # objectif : empêcher les séquences de boutons invalides AVANT le =
+
+    si longueur(expr) >= MAX_LEN:
+        retourner (False, "MAX_LEN")
+
+    si token est un chiffre:
+        # gérer zéros initiaux
+        si expr se termine sur un début de nombre "0" ET pas "0." :
+            si token est un chiffre:
+                retourner (False, "LEADING_ZERO")
+        retourner (True, None)
+
+    si token == ".":
+        si expr est vide:
+            retourner (False, "DOT_START")
+        si dernier token est un opérateur ou "(":
+            retourner (False, "DOT_AFTER_OPERATOR")
+        si le nombre en cours contient déjà ".":
+            retourner (False, "DOUBLE_DOT")
+        retourner (True, None)
+
+    si token est dans {"+","*","/","%","^"}:
+        si expr est vide:
+            retourner (False, "OP_START")
+        si dernier caractère est un opérateur (sauf cas spécial):
+            retourner (False, "DOUBLE_OPERATOR")
+        si dernier caractère est "(":
+            retourner (False, "OP_AFTER_OPEN_PAREN")
+        retourner (True, None)
+
+    si token == "-":
+        # autoriser le - unaire si contexte valide
+        si expr est vide:
+            retourner (True, None)
+        si dernier caractère est "(":
+            retourner (True, None)
+        si dernier caractère est un opérateur:
+            retourner (True, None)
+        # sinon c’est un opérateur binaire normal
+        retourner (True, None)
+
+    si token == "(":
+        # autoriser après opérateur ou début ou après une fonction
+        si expr est vide:
+            retourner (True, None)
+        si dernier caractère est un chiffre ou ")":
+            retourner (False, "MISSING_OPERATOR_BEFORE_PAREN")
+        retourner (True, None)
+
+    si token == ")":
+        si expr est vide:
+            retourner (False, "CLOSE_PAREN_START")
+        si parenthèses ouvertes == 0:
+            retourner (False, "PAREN_MISMATCH")
+        si dernier caractère est un opérateur ou "(":
+            retourner (False, "CLOSE_PAREN_AFTER_OPERATOR")
+        retourner (True, None)
+
+    si token se termine par "(" et token est dans {"sqrt(", "abs(", "inv("}:
+        # fonctions scientifiques préfixes
+        si expr n’est pas vide ET dernier caractère est un chiffre ou ")":
+            retourner (False, "MISSING_OPERATOR_BEFORE_FUNCTION")
+        retourner (True, None)
+
+    si token == "!":
+        # postfix : doit suivre un nombre ou ')'
+        si expr est vide:
+            retourner (False, "FACTORIAL_NO_ARG")
+        si dernier caractère n’est ni chiffre ni ")":
+            retourner (False, "FACTORIAL_BAD_POS")
+        retourner (True, None)
+
+    retourner (False, "UNKNOWN_TOKEN")
+
+
+
+
+
+fonction validate_expression_final(expr):
+    si expr est vide:
+        retourner (False, "EMPTY_EXPR")
+
+    si parenthèses ouvertes != parenthèses fermées:
+        retourner (False, "PAREN_MISMATCH")
+
+    si expr finit par un opérateur ou "(" ou une fonction incomplète:
+        retourner (False, "INCOMPLETE_EXPR")
+
+    si expr contient "..":
+        retourner (False, "DOUBLE_DOT")
+
+    retourner (True, None)

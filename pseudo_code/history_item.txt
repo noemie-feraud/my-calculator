@@ -1,0 +1,8 @@
+fonction create_history_item(expr, result_text, result_value):
+    # objectif : créer une entrée d’historique normalisée
+
+    item.expr = expr
+    item.result_text = result_text
+    item.result_value = result_value
+
+    retourner item

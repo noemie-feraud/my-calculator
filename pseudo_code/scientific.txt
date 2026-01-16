@@ -1,0 +1,69 @@
+fonction abs_value(x):
+    si x >= 0: retourner x
+    sinon: retourner -x
+
+
+fonction inv_value(x):
+    si x == 0:
+        retourner ERREUR
+    retourner 1 / x
+
+
+fonction factorial_int(x):
+    # x doit être entier >= 0
+    si x n’est pas entier:
+        retourner ERREUR
+    si x < 0:
+        retourner ERREUR
+
+    res = 1
+    i = 1
+    tant que i <= x:
+        res = res * i
+        i = i + 1
+
+    retourner res
+
+
+fonction pow_int(a, b):
+    # b doit être entier (positif ou négatif)
+    si b n’est pas entier:
+        retourner ERREUR
+
+    si b == 0:
+        retourner 1
+
+    si b < 0:
+        si a == 0:
+            retourner ERREUR
+        retourner 1 / pow_int(a, -b)
+
+    # exponentiation rapide (étudiant : boucle simple possible)
+    res = 1
+    i = 0
+    tant que i < b:
+        res = res * a
+        i = i + 1
+
+    retourner res
+
+
+fonction sqrt_newton(x):
+    si x < 0:
+        retourner ERREUR
+    si x == 0:
+        retourner 0
+
+    guess = x
+    répéter 20 fois:
+        guess = (guess + x / guess) / 2
+
+    retourner guess
+
+
+fonction mod_int(a, b):
+    si b == 0:
+        retourner ERREUR
+    si a n’est pas entier OU b n’est pas entier:
+        retourner ERREUR
+    retourner reste de la division entière de a par b

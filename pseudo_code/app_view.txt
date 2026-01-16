@@ -1,0 +1,76 @@
+import customtkinter
+
+fonction create_ui():
+    # objectif : créer la fenêtre et tous les widgets (aucune logique métier)
+
+    créer fenêtre principale ui.window
+
+    créer ui.display (non éditable)
+    créer ui.message_zone
+    créer ui.standard_buttons
+    créer ui.scientific_buttons (cachés si mode_scientifique False)
+    créer ui.history_list (cliquable)
+    créer ui.history_clear_button
+    créer ui.history_reset_button
+    créer ui.memory_buttons (MC, MR, M+, M-)
+
+    organiser en frames + grid
+
+    retourner ui
+
+
+fonction bind_buttons(ui, controller):
+    # objectif : connecter chaque bouton à un handler du controller
+
+    pour chaque bouton chiffre 0..9:
+        au clic -> controller.handle_digit(chiffre)
+
+    pour chaque opérateur dans {"+", "-", "*", "/"}:
+        au clic -> controller.handle_operator(opérateur)
+
+    au clic "." -> controller.handle_decimal()
+    au clic "(" -> controller.handle_parenthesis("(")
+    au clic ")" -> controller.handle_parenthesis(")")
+
+    au clic "⌫" -> controller.handle_backspace()
+    au clic "C"  -> controller.handle_clear()
+    au clic "="  -> controller.handle_equals()
+
+    au clic "SCI" -> controller.toggle_scientific_mode()
+
+    au clic "√"   -> controller.handle_scientific_token("sqrt(")
+    au clic "|x|" -> controller.handle_scientific_token("abs(")
+    au clic "1/x" -> controller.handle_scientific_token("inv(")
+    au clic "^"   -> controller.handle_scientific_token("^")
+    au clic "x²"  -> controller.handle_scientific_token("^2")
+    au clic "x³"  -> controller.handle_scientific_token("^3")
+    au clic "%"   -> controller.handle_scientific_token("%")
+    au clic "!"   -> controller.handle_scientific_token("!")
+
+    au clic "MC" -> controller.handle_memory_action("MC")
+    au clic "MR" -> controller.handle_memory_action("MR")
+    au clic "M+" -> controller.handle_memory_action("M+")
+    au clic "M-" -> controller.handle_memory_action("M-")
+
+    au clic sur un item d’historique (index i):
+        controller.handle_history_click(i)
+
+    au clic "Effacer historique":
+        controller.handle_history_clear()
+
+    au clic "Réinitialiser":
+        controller.handle_reset_all()
+
+
+fonction render(ui, state):
+    # objectif : refléter totalement l’état dans l’UI
+
+    afficher state.display_text dans ui.display
+    afficher state.message_text dans ui.message_zone (style selon message_type)
+
+    si state.mode_scientifique == True:
+        afficher le clavier scientifique
+    sinon:
+        masquer le clavier scientifique
+
+    afficher la liste state.history_items dans ui.history_list
