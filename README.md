@@ -25,12 +25,16 @@ Objectifs du projet : une appli **simple à expliquer**, robuste côté erreurs,
 - `%` : modulo (**entiers uniquement**, diviseur non nul)
 - `!` : factorielle (**postfix**, entier ≥ 0)
 
+
 ### Historique & mémoire
+
 - Historique en mémoire (pas de base de données)
 - Clic sur une ligne = rappel de l’expression
 - Mémoire : `MC`, `MR`, `M+`, `M-`
 
+
 ### Gestion d’erreurs
+
 - Validation au clic + validation finale au `=`
 - Messages explicites : parenthèses invalides, double opérateur, division par zéro, etc.
 
@@ -46,82 +50,102 @@ Objectifs du projet : une appli **simple à expliquer**, robuste côté erreurs,
 
 ```bash
 pip install -r requirements.txt
-Lancer l’application
-bash
-Copier le code
+```
+
+## Lancer l’application
+
+```bash
 python main.py
-Utilisation (boutons importants)
-= : calcule l’expression (après validation finale)
+```
 
-C : efface uniquement l’expression + les messages (garde historique + mémoire)
+## Utilisation (boutons importants)
 
-Réinitialiser (AC) : reset complet (retour à l’état initial)
+* `=` : calcule l’expression *(après validation finale)*
 
-⌫ : supprime le dernier caractère
+* `C` : efface uniquement l’expression + les messages *(garde historique + mémoire)*
 
-SCI : affiche/masque le clavier scientifique
+* `Réinitialiser (AC)` : reset complet *(retour à l’état initial)*
 
-Comportement après un résultat
-Si tu tapes un chiffre après = → nouvelle expression
+* `⌫` : supprime le dernier caractère
 
-Si tu tapes un opérateur après = → continue le calcul à partir du dernier résultat
+* `SCI` : affiche/masque le clavier scientifique
 
-Règles de validation (ce que l’app empêche)
-Quelques règles (pour éviter les expressions impossibles) :
+### Comportement après un résultat
 
-Pas deux opérateurs d’affilée (+*, -- est géré comme moins unaire selon le contexte)
+Si tu tapes un **chiffre** après `=` → nouvelle expression
 
-Parenthèses cohérentes et équilibrées
+Si tu tapes un **opérateur** après `=` → continue le calcul à partir du dernier résultat
 
-Un seul . par nombre
 
-Pas de nombres du type 05 (zéro inutile au début)
+### Règles de validation (ce que l’app empêche)
 
-Factorielle ! seulement après un nombre ou une )
+**Quelques règles (pour éviter les expressions impossibles) :**
 
-Fonctions sqrt( / abs( / inv( seulement si c’est logique (pas collées à un nombre sans opérateur)
+* Pas deux opérateurs d’affilée (`+``*`, `-``-` est géré comme moins unaire selon le contexte)
 
-Comment ça marche (moteur de calcul)
-L’évaluation se fait en 3 étapes (classique et expliquable) :
+* Parenthèses cohérentes et équilibrées
 
-Tokenize : transforme le texte en tokens (nombres, opérateurs, fonctions…)
+* Un seul `.` par nombre
 
-Shunting-yard : conversion en RPN (notation polonaise inversée)
+* Pas de nombres du type `05` (zéro inutile au début)
 
-Évaluation RPN : calcul avec une pile
+* Factorielle `!` seulement après un nombre ou une `)`
 
-Tout est fait sans eval() et sans math.
+* Fonctions `sqrt(` / `abs(` / `inv(` seulement si c’est logique (pas collées à un nombre sans opérateur)
 
-Structure du projet
-bash
-Copier le code
-.
-├── main.py
-├── requirements.txt
-├── app_view.py          # UI (CustomTkinter)
-├── app_controller.py    # handlers clics + pipeline
-├── app_state.py         # état global de l’app
-├── engine.py            # moteur d’évaluation (tokens → RPN → calcul)
-├── validation.py        # validation au clic + validation finale
-├── scientific.py        # fonctions scientifiques (sans math)
-├── formatting.py        # formatage du résultat
-├── history.py           # historique (en mémoire)
-├── memory.py            # mémoire (MC/MR/M+/M-)
-├── errors.py            # messages d’erreur centralisés
-├── history_item.py      # modèle item d’historique
-└── test_*.py            # tests unitaires
-Tests
-bash
-Copier le code
+
+### Comment ça marche (moteur de calcul)
+
+**L’évaluation se fait en 3 étapes (classique et expliquable) :**
+
+1. Tokenize : transforme le texte en tokens (nombres, opérateurs, fonctions…)
+
+2. Shunting-yard : conversion en RPN (notation polonaise inversée)
+
+3. Évaluation RPN : calcul avec une pile
+
+***Tout est fait sans eval() et sans math.***
+
+
+## Structure du projet
+
+* **main.py**
+* **requirements.txt**
+* **app_view.py**          # UI (CustomTkinter)
+* **app_controller.py**    # handlers clics + pipeline
+* **app_state.py**         # état global de l’app
+* **engine.py**            # moteur d’évaluation (tokens → RPN → calcul)
+* **validation.py**        # validation au clic + validation finale
+* **scientific.py**        # fonctions scientifiques (sans math)
+* **formatting.py**        # formatage du résultat
+* **history.py**           # historique (en mémoire)
+* **memory.py**            # mémoire (MC/MR/M+/M-)
+* **errors.py**            # messages d’erreur centralisés
+* **history_item.py**      # modèle item d’historique
+* **test_.py**             # tests unitaires
+
+
+### Tests
+
+```bash
 python -m unittest discover -s . -p "test_*.py"
-Limites connues
+```
+
+### Limites connues
+
 Pas de saisie clavier (clic uniquement)
 
-^ : exposant entier uniquement
+* **^** : exposant entier uniquement
 
-% : entiers uniquement
+* **%** : entiers uniquement
 
-sqrt : approximation numérique (Newton)
+* **sqrt** : approximation numérique (Newton)
 
-Crédits
-Projet étudiant — calculatrice GUI en Python / CustomTkinter.
+---
+
+## Crédits
+**Projet étudiant — calculatrice GUI en Python / CustomTkinter.**
+
+## [![Réalisé par](https://img.shields.io/badge/R%C3%89ALIS%C3%89-PAR-orange?style=for-the-badge)](https://forthebadge.com)
+
+**Antuat Abdallah** | **Ahamada Assmine** | **Noémie Feraud**
