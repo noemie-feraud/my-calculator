@@ -70,14 +70,14 @@ python main.py
 
 * `SCI` : affiche/masque le clavier scientifique
 
-### Comportement après un résultat
+## Comportement après un résultat
 
 Si tu tapes un **chiffre** après `=` → nouvelle expression
 
 Si tu tapes un **opérateur** après `=` → continue le calcul à partir du dernier résultat
 
 
-### Règles de validation (ce que l’app empêche)
+## Règles de validation (ce que l’app empêche)
 
 **Quelques règles (pour éviter les expressions impossibles) :**
 
@@ -94,7 +94,7 @@ Si tu tapes un **opérateur** après `=` → continue le calcul à partir du der
 * Fonctions `sqrt(` / `abs(` / `inv(` seulement si c’est logique (pas collées à un nombre sans opérateur)
 
 
-### Comment ça marche (moteur de calcul)
+## Comment ça marche (moteur de calcul)
 
 **L’évaluation se fait en 3 étapes (classique et expliquable) :**
 
