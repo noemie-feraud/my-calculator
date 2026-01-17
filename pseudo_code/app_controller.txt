@@ -1,275 +1,323 @@
-from domain.validation import validate_button_action, validate_expression_final
-from domain.engine import evaluate_expression
-from domain.formatting import format_result
-from domain.history import history_add, history_clear, history_select
-from domain.memory import memory_clear, memory_recall, memory_add, memory_sub
-from models.errors import get_message
+PS DU FICHIER : controller/app_controller.py
+OBJECTIF :
+- Le contrôleur reçoit des actions UI (clics boutons)
+- Met à jour self.state
+- Demande à l’UI d’afficher self.state via self._render()
+
+------------------------------------------------------------
+RAPPEL : champs de self.state utilisés ici
+- expression_text : string (ce que l’utilisateur tape)
+- display_text    : string (ce qu’on affiche)
+- message_text    : string (texte message)
+- message_type    : string ("error" / "info" / "")
+- error_mode      : bool (si True => on est en erreur)
+- after_result    : bool (si True => dernier affichage était un résultat)
+- recall_history  : bool (flag utilisé ailleurs, ici on le remet souvent à False)
+- last_result_value : float | None
+- last_result_text  : string
+- mode_scientifique : bool
+------------------------------------------------------------
 
 
-fonction create_controller(initial_state, ui):
-    controller.state = initial_state
-    controller.ui = ui
-    retourner controller
+CLASSE AppController
+============================================================
 
+fonction __init__(initial_state, ui):
+    1) self.state = initial_state
+    2) self.ui = ui
 
-fonction apply_and_render(controller, new_state):
-    controller.state = new_state
-    render(controller.ui, controller.state)
 
+"""
+HELPERS (petites fonctions internes)
+"""
 
-fonction set_error(state, error_code):
-    state.message_text = get_message(error_code)
-    state.message_type = "error"
-    state.error_mode = True
-    retourner state
+fonction _render():
+    # 1) afficher l’état dans l’interface
+    ui.render(self.state)
 
+    # 2) IMPORTANT : les widgets d’historique sont recréés à chaque render
+    #    donc on rebinde les events de clic d’historique
+    ui.bind_history_clicks(self)
 
-fonction clear_message(state):
-    state.message_text = ""
-    state.message_type = ""
-    retourner state
 
+fonction _set_error(code):
+    # Met l’app en "mode erreur" + message adapté
+    1) self.state.message_text = get_message(code)
+    2) self.state.message_type = "error"
+    3) self.state.error_mode = True
 
-fonction handle_digit(controller, digit):
-    state = controller.state
 
-    # règle : si on était en erreur, repartir propre
-    si state.error_mode == True:
-        state = clear_entry_keep_history_memory(state)
+fonction _set_info(text):
+    # Met un message d’info simple (sans mode erreur)
+    1) self.state.message_text = text
+    2) self.state.message_type = "info"
+    3) self.state.error_mode = False
 
-    # règle : après résultat, un chiffre démarre une nouvelle expression
-    si state.after_result == True:
-        state = clear_entry_keep_history_memory(state)
 
-    token = digit sous forme texte
+fonction _clear_message():
+    # Supprime le message affiché
+    1) self.state.message_text = ""
+    2) self.state.message_type = ""
 
-    (ok, error_code) = validate_button_action(state.expression_text, token)
 
-    si ok == False:
-        state = set_error(state, error_code)
-        apply_and_render(controller, state)
-        retourner
+fonction _clear_entry_keep_history_memory():
+    # Bouton C : on efface uniquement la saisie actuelle + messages
+    # (on ne touche pas à l’historique ni à la mémoire)
+    1) self.state.expression_text = ""
+    2) self.state.display_text = ""
+    3) appeler _clear_message()
+    4) self.state.error_mode = False
+    5) self.state.after_result = False
+    6) self.state.recall_history = False
 
-    state.expression_text = state.expression_text + token
-    state.display_text = state.expression_text
-    state = clear_message(state)
 
-    state.after_result = False
-    state.recall_history = False
+fonction _append_token(token) -> bool:
+    # Ajoute un token dans expression_text, MAIS seulement si la validation OK
+    1) (ok, err) = validate_button_action(self.state.expression_text, token)
 
-    apply_and_render(controller, state)
+    2) SI ok == False ALORS
+           appeler _set_error(err OU "UNKNOWN_TOKEN")
+           retourner False
 
+    3) SINON (ok == True)
+           self.state.expression_text = self.state.expression_text + token
+           self.state.display_text = self.state.expression_text
+           appeler _clear_message()
+           self.state.after_result = False
+           self.state.recall_history = False
+           retourner True
 
-fonction handle_operator(controller, op):
-    state = controller.state
 
-    si state.error_mode == True:
-        apply_and_render(controller, state)
-        retourner
+fonction _append_chars_as_clicks(text) -> bool:
+    # Sert pour MR : injecter un nombre comme si l’utilisateur cliquait bouton par bouton
+    # Exemple "-12.5" => '-', '1', '2', '.', '5'
 
-    # après résultat : permettre l’enchaînement à partir du résultat
-    si state.after_result == True:
-        si state.last_result_text est vide:
-            state = set_error(state, "NO_LAST_RESULT")
-            apply_and_render(controller, state)
-            retourner
-        sinon:
-            state.expression_text = state.last_result_text
-            state.after_result = False
+    1) POUR chaque caractère ch dans text FAIRE
+           SI ch == "-" ALORS
+               SI _append_token("-") == False => retourner False
 
-    (ok, error_code) = validate_button_action(state.expression_text, op)
-    si ok == False:
-        state = set_error(state, error_code)
-        apply_and_render(controller, state)
-        retourner
+           SINON SI ch est un chiffre (0..9) ALORS
+               SI _append_token(ch) == False => retourner False
 
-    state.expression_text = state.expression_text + op
-    state.display_text = state.expression_text
-    state = clear_message(state)
+           SINON SI ch == "." ALORS
+               SI _append_token(".") == False => retourner False
 
-    apply_and_render(controller, state)
+           SINON
+               appeler _set_error("UNKNOWN_TOKEN")
+               retourner False
 
+    2) retourner True
 
-fonction handle_decimal(controller):
-    appeler handle_token_simple(controller, ".")
 
+"""
+HANDLERS (1 fonction = 1 action/bouton)
+"""
 
-fonction handle_parenthesis(controller, par):
-    appeler handle_token_simple(controller, par)
+fonction handle_digit(digit):
+    # Boutons 0..9
 
+    1) SI self.state.error_mode == True ALORS
+           appeler _clear_entry_keep_history_memory()
+           # (pas de return : on continue et on ajoute le chiffre)
 
-fonction handle_scientific_token(controller, token):
-    state = controller.state
+    2) SI self.state.after_result == True ALORS
+           # règle : taper un chiffre après un résultat => nouvelle expression
+           appeler _clear_entry_keep_history_memory()
 
-    si state.error_mode == True:
-        apply_and_render(controller, state)
-        retourner
+    3) appeler _append_token(digit)
+    4) appeler _render()
 
-    si token == "^2":
-        # se comporte comme ajouter "^2" (sans parenthèses)
-        token_to_add = "^2"
-    sinon si token == "^3":
-        token_to_add = "^3"
-    sinon:
-        token_to_add = token
 
-    appeler handle_token_simple(controller, token_to_add)
+fonction handle_operator(op):
+    # + - * / % ^
 
+    1) SI self.state.error_mode == True ALORS
+           appeler _render()
+           retourner
 
-fonction handle_token_simple(controller, token):
-    state = controller.state
+    2) SI self.state.after_result == True ALORS
+           # règle : on enchaîne à partir du dernier résultat
+           SI self.state.last_result_text est vide ALORS
+               appeler _set_error("NO_LAST_RESULT")
+               appeler _render()
+               retourner
+           SINON
+               self.state.expression_text = self.state.last_result_text
+               self.state.display_text = self.state.expression_text
+               self.state.after_result = False
 
-    # si after_result et token est un chiffre => nouvelle expression
-    # ici token n’est pas forcément un chiffre, donc règles spéciales :
-    # - si token est opérateur => enchaînement (géré ailleurs)
-    # - sinon (parenthèse, fonction, etc.) : repartir sur une nouvelle expression
-    si state.after_result == True ET token n’est pas dans {"+","-","*","/","%","^"}:
-        state = clear_entry_keep_history_memory(state)
+    3) appeler _append_token(op)
+    4) appeler _render()
 
-    (ok, error_code) = validate_button_action(state.expression_text, token)
 
-    si ok == False:
-        state = set_error(state, error_code)
-        apply_and_render(controller, state)
-        retourner
+fonction handle_decimal():
+    # bouton "."
+    1) SI self.state.error_mode == True ALORS
+           appeler _render()
+           retourner
 
-    state.expression_text = state.expression_text + token
-    state.display_text = state.expression_text
-    state = clear_message(state)
+    2) appeler _append_token(".")
+    3) appeler _render()
 
-    state.after_result = False
-    state.recall_history = False
 
-    apply_and_render(controller, state)
+fonction handle_parenthesis(par):
+    # bouton "(" ou ")"
+    1) SI self.state.error_mode == True ALORS
+           appeler _render()
+           retourner
 
+    2) SI self.state.after_result == True ET par == "(" ALORS
+           # règle : ouvrir une parenthèse après résultat => nouvelle expression
+           appeler _clear_entry_keep_history_memory()
 
-fonction handle_backspace(controller):
-    state = controller.state
+    3) appeler _append_token(par)
+    4) appeler _render()
 
-    si state.error_mode == True:
-        state = clear_entry_keep_history_memory(state)
-        apply_and_render(controller, state)
-        retourner
 
-    si state.expression_text est vide:
-        apply_and_render(controller, state)
-        retourner
+fonction handle_scientific_token(token):
+    # tokens possibles (selon l’UI) :
+    # - "sqrt(" "abs(" "inv(" ...
+    # - "^" "%"
+    # - "!" (postfix)
+    # - "^2" "^3" (cas spécial)
 
-    supprimer le dernier caractère de state.expression_text
-    state.display_text = state.expression_text
-    state = clear_message(state)
+    1) SI self.state.error_mode == True ALORS
+           appeler _render()
+           retourner
 
-    apply_and_render(controller, state)
+    2) SI token == "^2" ALORS
+           ok1 = _append_token("^")
+           SI ok1 == True ALORS
+               ok2 = _append_token("2")   # (dans le code ok2 existe même si non utilisé)
+           appeler _render()
+           retourner
 
+    3) SI token == "^3" ALORS
+           ok1 = _append_token("^")
+           SI ok1 == True ALORS
+               ok2 = _append_token("3")
+           appeler _render()
+           retourner
 
-fonction handle_clear(controller):
-    state = controller.state
-    state = clear_entry_keep_history_memory(state)
-    apply_and_render(controller, state)
+    4) SINON (cas général)
+           appeler _append_token(token)
+           appeler _render()
 
 
-fonction clear_entry_keep_history_memory(state):
-    state.expression_text = ""
-    state.display_text = ""
-    state.message_text = ""
-    state.message_type = ""
-    state.error_mode = False
-    state.after_result = False
-    state.recall_history = False
-    # ne pas toucher history_items
-    # ne pas toucher memory_value
-    retourner state
+fonction handle_backspace():
+    # bouton ⌫
 
+    1) SI self.state.error_mode == True ALORS
+           appeler _clear_entry_keep_history_memory()
+           appeler _render()
+           retourner
 
-fonction handle_equals(controller):
-    state = controller.state
+    2) SI self.state.expression_text est vide ALORS
+           appeler _render()
+           retourner
 
-    si state.error_mode == True:
-        apply_and_render(controller, state)
-        retourner
+    3) self.state.expression_text = self.state.expression_text sans le dernier caractère
+    4) self.state.display_text = self.state.expression_text
+    5) appeler _clear_message()
+    6) appeler _render()
 
-    expr = state.expression_text
 
-    (ok, error_code) = validate_expression_final(expr)
+fonction handle_clear():
+    # bouton C
+    1) appeler _clear_entry_keep_history_memory()
+    2) appeler _render()
 
-    si ok == False:
-        state = set_error(state, error_code)
-        apply_and_render(controller, state)
-        retourner
 
-    (success, value, engine_error_code) = evaluate_expression(expr)
+fonction handle_equals():
+    # bouton "="
 
-    si success == False:
-        state = set_error(state, engine_error_code)
-        apply_and_render(controller, state)
-        retourner
+    1) SI self.state.error_mode == True ALORS
+           appeler _render()
+           retourner
 
-    result_text = format_result(value)
+    2) expr = self.state.expression_text
 
-    state.last_result_value = value
-    state.last_result_text = result_text
+    3) (ok, err) = validate_expression_final(expr)
+       SI ok == False ALORS
+           appeler _set_error(err OU "INCOMPLETE_EXPR")
+           appeler _render()
+           retourner
 
-    state = history_add(state, expr, result_text, value)
+    4) (success, value, engine_err) = evaluate_expression(expr)
+       SI success == False OU value est None ALORS
+           appeler _set_error(engine_err OU "EVAL_ERROR")
+           appeler _render()
+           retourner
 
-    state.expression_text = result_text
-    state.display_text = result_text
+    5) result_text = format_result(value)
 
-    state.after_result = True
-    state.error_mode = False
-    state = clear_message(state)
+    6) self.state.last_result_value = value
+       self.state.last_result_text = result_text
 
-    apply_and_render(controller, state)
+    7) self.state = history_add(self.state, expr, result_text, value)
 
+    8) self.state.expression_text = result_text
+       self.state.display_text = result_text
+       self.state.after_result = True
+       self.state.error_mode = False
+       appeler _clear_message()
 
-fonction handle_history_click(controller, index):
-    state = controller.state
+    9) appeler _render()
 
-    (state2, selected_expr) = history_select(state, index)
 
-    # si erreur index, state2 contiendra un message d’erreur
-    apply_and_render(controller, state2)
+fonction handle_history_click(index):
+    1) (self.state, _) = history_select(self.state, index)
+    2) appeler _render()
 
 
-fonction handle_history_clear(controller):
-    state = controller.state
-    state = history_clear(state)
-    apply_and_render(controller, state)
+fonction handle_history_clear():
+    1) self.state = history_clear(self.state)
+    2) appeler _render()
 
 
-fonction handle_memory_action(controller, action):
-    state = controller.state
+fonction handle_memory_action(action):
+    # actions : "MC" "MR" "M+" "M-"
 
-    si action == "MC":
-        state = memory_clear(state)
+    1) SI action == "MC" ALORS
+           self.state = memory_clear(self.state)
+           appeler _render()
+           retourner
 
-    sinon si action == "MR":
-        (state, injected_text) = memory_recall(state)
-        si injected_text n’est pas vide:
-            # on réutilise la même logique qu’une saisie de nombre
-            (ok, error_code) = validate_button_action(state.expression_text, injected_text)
-            si ok == False:
-                state = set_error(state, error_code)
-            sinon:
-                state.expression_text = state.expression_text + injected_text
-                state.display_text = state.expression_text
-                state = clear_message(state)
+    2) SI action == "MR" ALORS
+           (self.state, injected) = memory_recall(self.state)
 
-    sinon si action == "M+":
-        state = memory_add(state)   # ajoute une valeur calculée selon règles mémoire
+           SI self.state.after_result == True ALORS
+               appeler _clear_entry_keep_history_memory()
 
-    sinon si action == "M-":
-        state = memory_sub(state)
+           ok = _append_chars_as_clicks(injected)
+           SI ok == False ALORS
+               # rien à faire : l’erreur a déjà été mise dans self.state
+               pass
 
-    apply_and_render(controller, state)
+           appeler _render()
+           retourner
 
+    3) SI action == "M+" ALORS
+           self.state = memory_add(self.state)
+           appeler _render()
+           retourner
 
-fonction toggle_scientific_mode(controller):
-    state = controller.state
-    state.mode_scientifique = NON state.mode_scientifique
-    apply_and_render(controller, state)
+    4) SI action == "M-" ALORS
+           self.state = memory_sub(self.state)
+           appeler _render()
+           retourner
 
+    5) SINON (action inconnue)
+           appeler _set_error("UNKNOWN_TOKEN")
+           appeler _render()
 
-fonction handle_reset_all(controller):
-    # reset total (équivalent AC)
-    state = create_initial_state()
-    apply_and_render(controller, state)
+
+fonction toggle_scientific_mode():
+    1) self.state.mode_scientifique = NON self.state.mode_scientifique
+    2) appeler _render()
+
+
+fonction handle_reset_all():
+    # bouton AC (reset complet)
+    1) self.state = create_initial_state()
+    2) appeler _render()

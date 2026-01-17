@@ -1,20 +1,48 @@
-import customtkinter
+PS DU FICHIER : main.py
 
-from models.app_state import create_initial_state
-from ui.app_view import create_ui, bind_buttons, render
-from controller.app_controller import create_controller
+BUT :
+- Point d’entrée de l’application.
+- Ici on ne calcule rien, on ne valide rien.
+- On assemble juste les 3 “gros blocs” :
+  1) l’état (AppState)
+  2) l’interface (AppView)
+  3) le contrôleur (AppController)
+- Puis on connecte les boutons et on lance la fenêtre.
 
 
-fonction main():
-    # objectif : point d’entrée du programme (aucune logique métier ici)
 
-    state = create_initial_state()
+importer create_initial_state depuis models.app_state
+importer AppView depuis ui.app_view
+importer AppController depuis controller.app_controller
 
-    ui = create_ui()                 # crée fenêtre + widgets (display, message, boutons, historique)
-    controller = create_controller(state, ui)
 
-    bind_buttons(ui, controller)     # connecter UNIQUEMENT les boutons (pas de clavier PC)
 
-    render(ui, state)                # rendu initial : écran vide, message vide, historique vide
+fonction main() -> None:
+    # Objectif : démarrer l’app proprement
 
-    lancer la boucle d’événements de l’UI (mainloop)
+    1) state = create_initial_state()
+       # crée un AppState tout neuf (expression vide, historique vide, etc.)
+
+    2) ui = AppView()
+       # construit la fenêtre + tous les widgets (écran, boutons, historique...)
+
+    3) controller = AppController(initial_state=state, ui=ui)
+       # branche la logique : le controller garde l’état et sait parler à l’UI
+
+    4) ui.bind_buttons(controller)
+       # connecte chaque bouton à la bonne méthode du controller
+       # IMPORTANT : uniquement les clics, pas le clavier du PC
+
+    5) ui.render(controller.state)
+       # premier affichage (écran vide au début)
+
+    6) ui.bind_history_clicks(controller)
+       # l’historique est vide au démarrage,
+       # mais on applique la même logique de binding (cohérence)
+
+    7) ui.mainloop()
+       # lance la boucle de la fenêtre (l’app “tourne” ici)
+
+
+si __name__ == "__main__":
+    appeler main()

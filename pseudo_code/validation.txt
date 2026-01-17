@@ -1,93 +1,213 @@
-fonction validate_button_action(expr, token):
-    # objectif : empêcher les séquences de boutons invalides AVANT le =
+PS DU FICHIER : domain/validation.py
 
-    si longueur(expr) >= MAX_LEN:
+BUT :
+- Valider ce que l’utilisateur fait au moment du clic (validate_button_action)
+- Valider l’expression finale au moment de "=" (validate_expression_final)
+- Objectif : bloquer tôt les erreurs (plus simple pour le moteur ensuite)
+
+CONSTANTE :
+MAX_LEN = 80
+(si expr est déjà trop longue, on refuse tout)
+
+
+
+fonction parentheses_balance(expr: str) -> int:
+    # Objectif : compter combien de "(" ne sont pas encore fermées.
+    # Ex :
+    #   "(1+2" => 1
+    #   "(1+2)" => 0
+    # Important :
+    # - si on ferme trop tôt (ex: ")1+2"), on retourne -999
+
+    count = 0
+
+    pour chaque caractère c dans expr:
+        si c == "(":
+            count += 1
+        sinon si c == ")":
+            count -= 1
+            si count < 0:
+                retourner -999
+
+    retourner count
+
+
+fonction last_char(expr: str) -> str:
+    # Dernier caractère si expr non vide, sinon ""
+    si expr est vide:
+        retourner ""
+    sinon:
+        retourner expr[-1]
+
+
+
+fonction is_operator_char(c: str) -> bool:
+    # Opérateurs gérés par le moteur
+    retourner True si c est dans {"+","-","*","/","%","^"}
+    sinon False
+
+
+
+
+fonction current_number_fragment(expr: str) -> str:
+    # Objectif : récupérer la “fin du nombre en cours”
+    # On remonte depuis la fin tant que c’est chiffre ou "."
+    # Exemple : "12.3+45.6" -> "45.6"
+    # Exemple : "12+" -> ""
+
+    i = len(expr) - 1
+    frag = ""
+
+    tant que i >= 0:
+        c = expr[i]
+        si c est un chiffre OU c == ".":
+            frag = c + frag
+            i -= 1
+        sinon:
+            arrêter
+
+    retourner frag
+
+
+
+
+fonction validate_button_action(expr: str, token: str) -> (bool, Optional[str]):
+
+    # 0) Règle longueur max
+    si len(expr) >= MAX_LEN:
         retourner (False, "MAX_LEN")
 
-    si token est un chiffre:
-        # gérer zéros initiaux
-        si expr se termine sur un début de nombre "0" ET pas "0." :
-            si token est un chiffre:
-                retourner (False, "LEADING_ZERO")
-        retourner (True, None)
-
-    si token == ".":
-        si expr est vide:
-            retourner (False, "DOT_START")
-        si dernier token est un opérateur ou "(":
-            retourner (False, "DOT_AFTER_OPERATOR")
-        si le nombre en cours contient déjà ".":
-            retourner (False, "DOUBLE_DOT")
-        retourner (True, None)
-
-    si token est dans {"+","*","/","%","^"}:
-        si expr est vide:
-            retourner (False, "OP_START")
-        si dernier caractère est un opérateur (sauf cas spécial):
-            retourner (False, "DOUBLE_OPERATOR")
-        si dernier caractère est "(":
-            retourner (False, "OP_AFTER_OPEN_PAREN")
-        retourner (True, None)
-
-    si token == "-":
-        # autoriser le - unaire si contexte valide
-        si expr est vide:
-            retourner (True, None)
-        si dernier caractère est "(":
-            retourner (True, None)
-        si dernier caractère est un opérateur:
-            retourner (True, None)
-        # sinon c’est un opérateur binaire normal
-        retourner (True, None)
-
-    si token == "(":
-        # autoriser après opérateur ou début ou après une fonction
-        si expr est vide:
-            retourner (True, None)
-        si dernier caractère est un chiffre ou ")":
-            retourner (False, "MISSING_OPERATOR_BEFORE_PAREN")
-        retourner (True, None)
-
-    si token == ")":
-        si expr est vide:
-            retourner (False, "CLOSE_PAREN_START")
-        si parenthèses ouvertes == 0:
-            retourner (False, "PAREN_MISMATCH")
-        si dernier caractère est un opérateur ou "(":
-            retourner (False, "CLOSE_PAREN_AFTER_OPERATOR")
-        retourner (True, None)
-
-    si token se termine par "(" et token est dans {"sqrt(", "abs(", "inv("}:
-        # fonctions scientifiques préfixes
-        si expr n’est pas vide ET dernier caractère est un chiffre ou ")":
+    # 1) Fonctions scientifiques (token complet)
+    # token peut être exactement : "sqrt(" ou "abs(" ou "inv("
+    si token est dans {"sqrt(", "abs(", "inv("}:
+        # On interdit "...2sqrt(" ou "...)sqrt(" sans opérateur
+        si expr n’est pas vide ET (last_char(expr) est un chiffre OU last_char(expr) == ")"):
             retourner (False, "MISSING_OPERATOR_BEFORE_FUNCTION")
         retourner (True, None)
 
+    # 2) Factorielle postfix "!"
     si token == "!":
-        # postfix : doit suivre un nombre ou ')'
         si expr est vide:
             retourner (False, "FACTORIAL_NO_ARG")
-        si dernier caractère n’est ni chiffre ni ")":
+
+        lc = last_char(expr)
+        # Doit suivre un chiffre ou une parenthèse fermée
+        si lc n’est pas un chiffre ET lc != ")":
             retourner (False, "FACTORIAL_BAD_POS")
+
         retourner (True, None)
 
+    # 3) Parenthèse ouvrante "("
+    si token == "(":
+        # Interdit "2(" ou ")(" : il manque un opérateur
+        si expr n’est pas vide ET (last_char(expr) est un chiffre OU last_char(expr) == ")"):
+            retourner (False, "MISSING_OPERATOR_BEFORE_PAREN")
+        retourner (True, None)
+
+    # 4) Parenthèse fermante ")"
+    si token == ")":
+        si expr est vide:
+            retourner (False, "CLOSE_PAREN_START")
+
+        bal = parentheses_balance(expr)
+        # Si bal <= 0 : soit on n’a rien à fermer, soit expr est déjà “cassée”
+        si bal <= 0:
+            retourner (False, "PAREN_MISMATCH")
+
+        lc = last_char(expr)
+        # Interdit ")+", ")(" ??? non : ici on interdit seulement si ça finit par opérateur ou "("
+        si is_operator_char(lc) == True OU lc == "(":
+            retourner (False, "CLOSE_PAREN_AFTER_OPERATOR")
+
+        retourner (True, None)
+
+    # 5) Point "."
+    si token == ".":
+        si expr est vide:
+            retourner (False, "DOT_START")
+
+        lc = last_char(expr)
+        # Interdit "+." ou "(."
+        si is_operator_char(lc) == True OU lc == "(":
+            retourner (False, "DOT_AFTER_OPERATOR")
+
+        frag = current_number_fragment(expr)
+        # Interdit "12.3." : un seul point par nombre
+        si "." est déjà dans frag:
+            retourner (False, "DOUBLE_DOT")
+
+        retourner (True, None)
+
+    # 6) Chiffres "0".."9"
+    si token est un chiffre:
+        si expr n’est pas vide:
+            frag = current_number_fragment(expr)
+            # Interdit "00", "05", etc. (zéro initial)
+            si frag == "0":
+                retourner (False, "LEADING_ZERO")
+        retourner (True, None)
+
+    # 7) Opérateurs sauf '-' : { + * / % ^ }
+    si token est dans {"+", "*", "/", "%", "^"}:
+        si expr est vide:
+            retourner (False, "OP_START")
+
+        lc = last_char(expr)
+
+        # Interdit "++", "+*", etc.
+        si is_operator_char(lc) == True:
+            retourner (False, "DOUBLE_OPERATOR")
+
+        # Interdit "(+"
+        si lc == "(":
+            retourner (False, "OP_AFTER_OPEN_PAREN")
+
+        retourner (True, None)
+
+    # 8) Cas spécial "-" (peut être unaire ou binaire)
+    si token == "-":
+        # Si expression vide : on autorise "-..."
+        si expr est vide:
+            retourner (True, None)
+
+        lc = last_char(expr)
+
+        # Si on vient d’un opérateur ou d’une "(" : c’est un "-" unaire => autorisé
+        si is_operator_char(lc) == True OU lc == "(":
+            retourner (True, None)
+
+        # Sinon c’est un "-" binaire normal => autorisé aussi
+        retourner (True, None)
+
+    # 9) Sinon token inconnu
     retourner (False, "UNKNOWN_TOKEN")
 
 
 
+fonction validate_expression_final(expr: str) -> (bool, Optional[str]):
 
+    1) Si expr est vide :
+         retourner (False, "EMPTY_EXPR")
 
-fonction validate_expression_final(expr):
-    si expr est vide:
-        retourner (False, "EMPTY_EXPR")
+    2) Vérifier parenthèses :
+         bal = parentheses_balance(expr)
 
-    si parenthèses ouvertes != parenthèses fermées:
-        retourner (False, "PAREN_MISMATCH")
+         si bal != 0 OU bal == -999:
+             retourner (False, "PAREN_MISMATCH")
 
-    si expr finit par un opérateur ou "(" ou une fonction incomplète:
-        retourner (False, "INCOMPLETE_EXPR")
+    3) Vérifier dernier caractère :
+         lc = last_char(expr)
 
-    si expr contient "..":
-        retourner (False, "DOUBLE_DOT")
+         si lc est un opérateur OU lc == "(":
+             retourner (False, "INCOMPLETE_EXPR")
 
-    retourner (True, None)
+    4) Vérifier fonctions incomplètes en fin :
+         si expr se termine par "sqrt(" OU "abs(" OU "inv(":
+             retourner (False, "INCOMPLETE_EXPR")
+
+    5) Vérifier double point :
+         si ".." est dans expr:
+             retourner (False, "DOUBLE_DOT")
+
+    6) Sinon :
+         retourner (True, None)

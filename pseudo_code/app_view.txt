@@ -1,76 +1,222 @@
-import customtkinter
+PS DU FICHIER : ui/app_view.py
 
-fonction create_ui():
-    # objectif : créer la fenêtre et tous les widgets (aucune logique métier)
-
-    créer fenêtre principale ui.window
-
-    créer ui.display (non éditable)
-    créer ui.message_zone
-    créer ui.standard_buttons
-    créer ui.scientific_buttons (cachés si mode_scientifique False)
-    créer ui.history_list (cliquable)
-    créer ui.history_clear_button
-    créer ui.history_reset_button
-    créer ui.memory_buttons (MC, MR, M+, M-)
-
-    organiser en frames + grid
-
-    retourner ui
+BUT DU FICHIER :
+- Construire toute l’interface avec CustomTkinter (fenêtre + frames + boutons)
+- AUCUN calcul ici : l’UI ne fait que déclencher des actions
+- L’UI affiche ce qu’on lui donne (state.display_text, state.message_text, etc.)
+- L’utilisateur clique uniquement (pas de saisie clavier)
 
 
-fonction bind_buttons(ui, controller):
-    # objectif : connecter chaque bouton à un handler du controller
-
-    pour chaque bouton chiffre 0..9:
-        au clic -> controller.handle_digit(chiffre)
-
-    pour chaque opérateur dans {"+", "-", "*", "/"}:
-        au clic -> controller.handle_operator(opérateur)
-
-    au clic "." -> controller.handle_decimal()
-    au clic "(" -> controller.handle_parenthesis("(")
-    au clic ")" -> controller.handle_parenthesis(")")
-
-    au clic "⌫" -> controller.handle_backspace()
-    au clic "C"  -> controller.handle_clear()
-    au clic "="  -> controller.handle_equals()
-
-    au clic "SCI" -> controller.toggle_scientific_mode()
-
-    au clic "√"   -> controller.handle_scientific_token("sqrt(")
-    au clic "|x|" -> controller.handle_scientific_token("abs(")
-    au clic "1/x" -> controller.handle_scientific_token("inv(")
-    au clic "^"   -> controller.handle_scientific_token("^")
-    au clic "x²"  -> controller.handle_scientific_token("^2")
-    au clic "x³"  -> controller.handle_scientific_token("^3")
-    au clic "%"   -> controller.handle_scientific_token("%")
-    au clic "!"   -> controller.handle_scientific_token("!")
-
-    au clic "MC" -> controller.handle_memory_action("MC")
-    au clic "MR" -> controller.handle_memory_action("MR")
-    au clic "M+" -> controller.handle_memory_action("M+")
-    au clic "M-" -> controller.handle_memory_action("M-")
-
-    au clic sur un item d’historique (index i):
-        controller.handle_history_click(i)
-
-    au clic "Effacer historique":
-        controller.handle_history_clear()
-
-    au clic "Réinitialiser":
-        controller.handle_reset_all()
+CLASSE AppView
 
 
-fonction render(ui, state):
-    # objectif : refléter totalement l’état dans l’UI
+fonction __init__():
+    # Objectif : créer toute l’interface une seule fois
 
-    afficher state.display_text dans ui.display
-    afficher state.message_text dans ui.message_zone (style selon message_type)
+    1) Configurer CustomTkinter
+       - ctk.set_appearance_mode("System")
+       - ctk.set_default_color_theme("blue")
+       - scaling widgets + fenêtre (UI plus grande)
 
-    si state.mode_scientifique == True:
-        afficher le clavier scientifique
-    sinon:
-        masquer le clavier scientifique
+    2) Créer la fenêtre principale
+       - self.window = CTk()
+       - titre + taille
 
-    afficher la liste state.history_items dans ui.history_list
+    3) Créer la structure principale (2 colonnes)
+       - self.left_frame  : zone calculatrice
+       - self.right_frame : zone historique
+       - placer en grid
+       - configurer les weights (left plus large que right)
+
+    4) Créer la zone d’affichage (NON éditable)
+       - self.display_label (Label aligné à droite)
+       - self.message_label (Label pour erreurs/infos)
+
+    5) Créer la zone “clavier”
+       - self.keyboard_frame
+       - dedans : 2 frames côte à côte
+           a) self.standard_frame (boutons classiques)
+           b) self.scientific_frame (boutons scientifiques + mémoire)
+
+    6) Créer la partie historique (à droite)
+       - titre “Historique”
+       - self.history_scroll (ScrollableFrame)
+       - frame avec 2 boutons :
+           - self.btn_clear_history
+           - self.btn_reset_all
+
+    7) Préparer des conteneurs pour stocker les boutons
+       (ça simplifie le binding ensuite)
+       - self.btns_digit : dict "0".."9" -> bouton
+       - self.btns_op    : dict "+-*/" -> bouton
+       - self.btn_decimal, self.btn_open_par, self.btn_close_par, etc.
+       - self.btns_sci : dict token -> bouton scientifique
+       - self.btns_mem : dict action -> bouton mémoire
+       - self._history_row_buttons : liste des boutons créés pour l’historique
+
+    8) Construire réellement les boutons
+       - appeler self._build_standard_buttons()
+       - appeler self._build_scientific_buttons()
+
+
+fonction mainloop():
+    # Lance la boucle UI
+    window.mainloop()
+
+
+"""
+CONSTRUCTION DES BOUTONS
+"""
+
+fonction _build_standard_buttons():
+    # Objectif : créer les boutons "classiques" dans standard_frame
+
+    1) Définir la grille (liste de lignes)
+       [
+         ["7","8","9","/"],
+         ["4","5","6","*"],
+         ["1","2","3","-"],
+         ["0",".","=","+"],
+         ["(",")","C","⌫"]
+       ]
+
+    2) Pour chaque case (r, c) de la grille :
+       - créer un bouton CTkButton(text=label)
+       - le placer en grid
+       - selon le label, le ranger au bon endroit :
+           SI label est un chiffre -> self.btns_digit[label] = btn
+           SI label est "+-*/"     -> self.btns_op[label] = btn
+           SI label == "."         -> self.btn_decimal = btn
+           SI label == "("         -> self.btn_open_par = btn
+           SI label == ")"         -> self.btn_close_par = btn
+           SI label == "C"         -> self.btn_clear = btn
+           SI label == "⌫"         -> self.btn_backspace = btn
+           SI label == "="         -> self.btn_equals = btn
+              + mise en forme spéciale (couleur)
+
+    3) Créer le bouton "SCI" (toggle)
+       - self.btn_sci_toggle
+       - placé en dessous (row=5, columnspan=4)
+
+
+fonction _build_scientific_buttons():
+    # Objectif : créer les boutons scientifiques ET mémoire (dans scientific_frame)
+    # Important : on stocke des "tokens" à envoyer au controller
+
+    1) Définir la liste des boutons scientifiques (label affiché, token envoyé)
+       [
+         ("√"  , "sqrt("),
+         ("|x|", "abs("),
+         ("1/x", "inv("),
+         ("^"  , "^"),
+         ("x²" , "^2"),
+         ("x³" , "^3"),
+         ("%"  , "%"),
+         ("!"  , "!")
+       ]
+
+    2) Les placer en grille 4 lignes x 2 colonnes :
+       - pour chaque bouton :
+           créer CTkButton(text=label)
+           placer en grid
+           self.btns_sci[token] = btn
+
+    3) Créer les boutons mémoire (MC, MR, M+, M-)
+       - mem = [("MC","MC"), ("MR","MR"), ("M+","M+"), ("M-","M-")]
+       - les placer en 2x2 sous les boutons scientifiques
+       - self.btns_mem[action] = btn
+
+
+"""
+BINDING : CONNECTER LES BOUTONS AU CONTROLLER
+"""
+
+fonction bind_buttons(controller):
+    # Objectif : relier chaque bouton à une fonction du controller
+    # Ici on ne calcule rien : on fait juste "au clic -> controller...."
+
+    1) Pour chaque chiffre (digit, btn) dans self.btns_digit :
+         au clic -> controller.handle_digit(digit)
+
+    2) Pour chaque opérateur (op, btn) dans self.btns_op :
+         au clic -> controller.handle_operator(op)
+
+    3) Boutons simples :
+         "."  -> controller.handle_decimal()
+         "("  -> controller.handle_parenthesis("(")
+         ")"  -> controller.handle_parenthesis(")")
+         "⌫"  -> controller.handle_backspace()
+         "C"  -> controller.handle_clear()
+         "="  -> controller.handle_equals()
+
+    4) Toggle SCI :
+         "SCI" -> controller.toggle_scientific_mode()
+
+    5) Scientifique :
+         pour chaque (token, btn) dans self.btns_sci :
+             au clic -> controller.handle_scientific_token(token)
+
+    6) Mémoire :
+         pour chaque (action, btn) dans self.btns_mem :
+             au clic -> controller.handle_memory_action(action)
+
+    7) Actions historique (boutons à droite) :
+         "Effacer historique" -> controller.handle_history_clear()
+         "Réinitialiser (AC)" -> controller.handle_reset_all()
+
+
+fonction bind_history_clicks(controller):
+    # Objectif : brancher les clics sur les lignes d’historique
+    # Important : on doit le refaire après chaque render
+    # car les boutons d’historique sont détruits puis recréés
+
+    pour i, btn dans enumerate(self._history_row_buttons):
+        au clic -> controller.handle_history_click(i)
+
+
+"""
+RENDER : AFFICHER L’ETAT
+"""
+
+fonction render(state):
+    # Objectif : mettre l’UI à jour avec state
+
+    1) Mettre à jour le display :
+         display_label.text = state.display_text
+
+    2) Mettre à jour le message :
+         SI state.message_type == "error":
+             message_label.text = state.message_text
+             message_label.couleur = rouge
+         SINON SI state.message_type == "info":
+             message_label.text = state.message_text
+             message_label.couleur = vert
+         SINON:
+             message_label.text = ""
+             message_label.couleur = gris
+
+    3) Afficher/masquer le clavier scientifique :
+         SI state.mode_scientifique == True:
+             scientific_frame.grid()       # visible
+         SINON:
+             scientific_frame.grid_remove() # caché
+
+    4) Mettre à jour l’historique :
+         appeler _render_history(state.history_items)
+
+
+fonction _render_history(items):
+    # Objectif : reconstruire entièrement la liste d’historique à droite
+    # (simple : on détruit tout puis on recrée)
+
+    1) Détruire les anciens boutons :
+         pour chaque btn dans self._history_row_buttons:
+             btn.destroy()
+         self._history_row_buttons = []
+
+    2) Recréer un bouton par item :
+         pour chaque item dans items:
+             texte = "item.expr = item.result_text"
+             btn = CTkButton(history_scroll, text=texte, anchor="w")
+             btn.pack(...)
+             ajouter btn dans self._history_row_buttons

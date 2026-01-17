@@ -1,0 +1,74 @@
+PS DU FICHIER : domain/formatting.py
+
+BUT :
+- Convertir un résultat numérique (float) en texte affichable sur la calculatrice.
+- Règles :
+  1) Si le nombre est un entier exact : afficher sans ".0"
+  2) Sinon : afficher le float et enlever les zéros inutiles à la fin
+  3) Si le texte est trop long : afficher une version "e+..." simple (maison)
+
+IMPORTANT :
+- Ce fichier ne calcule rien.
+- Il ne valide rien.
+- Il ne gère pas les erreurs.
+- Il formate seulement un float -> str.
+
+
+fonction format_result(value: float, max_len: int = 18) -> str:
+
+    # -----------------------------
+    # Étape 1 : cas "entier exact"
+    # -----------------------------
+    SI value == int(value) ALORS
+        # Ex : 3.0 -> "3"
+        s = convertir int(value) en texte
+
+    SINON
+        # -----------------------------
+        # Étape 2 : cas "décimal"
+        # -----------------------------
+        s = convertir value en texte (str(value))
+
+        SI s contient "." ALORS
+            # enlever les zéros inutiles à droite
+            s = enlever les "0" à la fin
+            # si ça finit par un point, on l’enlève aussi
+            s = enlever le "." final si besoin
+
+        # Exemple :
+        # "2.5000" -> "2.5"
+        # "10.000" -> "10"
+
+    # -----------------------------------------
+    # Étape 3 : si le texte est trop long
+    # -----------------------------------------
+    SI longueur(s) > max_len ALORS
+
+        1) sign = "-" si s commence par "-" sinon ""
+        2) raw = s sans le signe "-" (s.lstrip("-"))
+
+        3) SI raw contient "." ALORS
+               raw = raw en retirant le point
+               # exemple : "12.345" -> "12345"
+
+        4) raw = enlever les zéros au début (lstrip("0"))
+           SI raw devient vide ALORS raw = "0"
+           # (cas où le nombre était 0.000... etc.)
+
+        5) SI longueur(raw) == 1 ALORS
+               # Ex : "0" ou "5"
+               retourner sign + raw
+
+        6) mantissa = raw[0] + "." + raw[1:7]
+           # on garde 1 chiffre puis "." puis jusqu’à 6 chiffres après
+           # exemple raw="123456789" -> mantissa="1.234567"
+
+        7) exp = longueur(raw) - 1
+           # exemple raw="12345" => exp=4 (car 1.2345e+4)
+
+        8) retourner f"{sign}{mantissa}e+{exp}"
+
+    # ---------------------------------------------
+    # Étape 4 : si pas trop long, on retourne s
+    # --------------------------------------------
+    retourner s

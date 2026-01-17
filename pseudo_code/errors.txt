@@ -1,15 +1,43 @@
-import un dictionnaire ERROR_MESSAGES (code -> message)
+PS DU FICHIER : models/errors.py
 
-fonction get_message(error_code, context=None):
-    # objectif : centraliser les messages
+BUT :
+- Avoir un seul endroit où sont stockés les messages d’erreur
+- Dans le reste du code, on utilise des codes ("DIV_ZERO", "EMPTY_EXPR", etc.)
+  au lieu d’écrire directement les phrases
+- Ça évite les erreurs et ça rend le code plus propre
 
-    si error_code est dans ERROR_MESSAGES:
-        msg = ERROR_MESSAGES[error_code]
 
-        si context n’est pas None:
-            remplacer les placeholders dans msg avec context
+"""
+Dictionnaire pour ERROR_MESSAGES
+"""
 
-        retourner msg
+ERROR_MESSAGES = {
+    "EMPTY_EXPR": "Entrez une expression avant de calculer.",
+    "MAX_LEN": "Expression trop longue.",
+    ...
+    "DIV_ZERO": "Division par zéro impossible.",
+    ...
+}
 
-    sinon:
-        retourner "Erreur inconnue."
+IDEe :
+- la clé = code erreur (string)
+- la valeur = message utilisateur (string)
+
+
+
+fonction get_message(code, context=None) -> string:
+    # Objectif :
+    # - retrouver le message correspondant à un code
+    # - si le code n’existe pas, retourner "Erreur inconnue."
+    # - si context existe : remplacer les {variables} dans le message
+
+    1) msg = ERROR_MESSAGES.get(code, "Erreur inconnue.")
+       # .get() : si code est trouvé -> renvoie le message
+       # sinon -> renvoie directement "Erreur inconnue."
+
+    2) SI context n’est pas None ALORS
+           POUR chaque (k, v) dans context.items():
+               # On remplace les placeholders du style "{k}" par la valeur v
+               msg = msg.replace("{" + str(k) + "}", str(v))
+
+    3) retourner msg

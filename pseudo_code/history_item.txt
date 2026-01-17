@@ -1,8 +1,35 @@
-fonction create_history_item(expr, result_text, result_value):
-    # objectif : créer une entrée d’historique normalisée
+PS DU FICHIER : models/history_item.py
 
-    item.expr = expr
-    item.result_text = result_text
-    item.result_value = result_value
+BUT :
+- Représenter UNE ligne d’historique de la calculatrice.
+- Une ligne d’historique contient :
+  1) l’expression tapée
+  2) le texte du résultat affiché (déjà formaté)
+  3) la valeur réelle du résultat en float (pour recalcul / mémoire si besoin)
 
-    retourner item
+
+
+classe HistoryItem (dataclass):
+    expr : str
+        # Exemple : "12+3"
+
+    result_text : str
+        # Exemple : "15" (texte prêt à afficher)
+
+    result_value : float
+        # Exemple : 15.0 (valeur numérique réelle)
+
+
+REMARQUE :
+- dataclass = Python crée automatiquement un constructeur "HistoryItem(...)"
+- donc on peut instancier directement HistoryItem(expr=..., result_text=..., result_value=...)
+
+
+fonction create_history_item(expr: str, result_text: str, result_value: float) -> HistoryItem:
+    # Objectif : créer une entrée d’historique en une ligne
+
+    1) retourner HistoryItem(
+           expr = expr,
+           result_text = result_text,
+           result_value = result_value
+       )

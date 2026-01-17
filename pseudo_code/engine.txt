@@ -1,213 +1,337 @@
-fonction evaluate_expression(expr):
-    tokens = tokenize(expr)
-    si tokens == ERREUR:
-        retourner (False, None, "TOKEN_ERROR")
+PS DU FICHIER : domain/engine.py
 
-    rpn = to_rpn(tokens)
-    si rpn == ERREUR:
-        retourner (False, None, "PARSE_ERROR")
+BUT :
+- Calculer une expression écrite en texte SANS utiliser eval() et SANS utiliser math.
+- On fait une méthode “classique” expliquable :
+  1) tokenize() : transforme le texte en liste de tokens (nombres + symboles)
+  2) to_rpn()   : convertit en notation polonaise inversée (RPN) avec shunting-yard
+  3) eval_rpn() : évalue la RPN avec une pile
 
-    (ok, value, err) = eval_rpn(rpn)
-    si ok == False:
-        retourner (False, None, err)
+TOKENS possibles :
+- nombres : float
+- opérateurs : "+", "-", "*", "/", "%", "^"
+- parenthèses : "(", ")"
+- moins unaire : "u-"   (ex: "-5" ou "(-3)")
+- fonctions : "sqrt", "abs", "inv"
+- factorielle postfix : "!"
 
-    retourner (True, value, None)
-
-
-
-fonction tokenize(expr):
-    tokens = liste vide
-    i = 0
-
-    tant que i < longueur(expr):
-        c = expr[i]
-
-        si c est un espace:
-            i = i + 1
-            continuer
-
-        si c est un chiffre OU c == ".":
-            lire un nombre complet (chiffres + 1 seul point)
-            ajouter nombre à tokens
-            continuer
-
-        si c est un opérateur dans {+ - * / % ^}:
-            # gérer - unaire :
-            si c == "-" ET (tokens est vide OU dernier token est un opérateur OU dernier token == "(" ):
-                ajouter "u-" à tokens     # token spécial pour moins unaire
-            sinon:
-                ajouter c à tokens
-            i = i + 1
-            continuer
-
-        si c == "(" ou c == ")":
-            ajouter c à tokens
-            i = i + 1
-            continuer
-
-        si expr à partir de i commence par "sqrt(":
-            ajouter "sqrt" à tokens
-            ajouter "(" à tokens
-            i = i + longueur("sqrt(")
-            continuer
-
-        si expr à partir de i commence par "abs(":
-            ajouter "abs" à tokens
-            ajouter "(" à tokens
-            i = i + longueur("abs(")
-            continuer
-
-        si expr à partir de i commence par "inv(":
-            ajouter "inv" à tokens
-            ajouter "(" à tokens
-            i = i + longueur("inv(")
-            continuer
-
-        si c == "!":
-            ajouter "!" à tokens
-            i = i + 1
-            continuer
-
-        sinon:
-            retourner ERREUR
-
-    retourner tokens
+Les fonctions scientifiques sont calculées dans domain/scientific.py :
+- pow_int, sqrt_newton, factorial_int, abs_value, inv_value, mod_int
 
 
+"""
+1) evaluate_expression(expr)
+"""
+
+fonction evaluate_expression(expr) -> (success, value, error_code):
+    # Objectif : fonction “top niveau” utilisée par le controller
+
+    1) tokens = tokenize(expr)
+       SI tokens == None ALORS
+           retourner (False, None, "TOKEN_ERROR")
+
+    2) rpn = to_rpn(tokens)
+       SI rpn == None ALORS
+           retourner (False, None, "PARSE_ERROR")
+
+    3) (ok, value, err) = eval_rpn(rpn)
+       SI ok == False ALORS
+           retourner (False, None, err)
+
+    4) retourner (True, value, None)
 
 
-fonction precedence(op):
-    si op == "!" : retourner 5
-    si op == "u-": retourner 4
-    si op dans {"sqrt","abs","inv"} : retourner 4
-    si op == "^" : retourner 3
-    si op dans {"*","/","%"} : retourner 2
-    si op dans {"+","-"} : retourner 1
-    retourner 0
+"""
+2) tokenize(expr)
+"""
 
-fonction is_right_associative(op):
-    si op == "^": retourner True
-    si op == "u-": retourner True
-    retourner False
+fonction tokenize(expr) -> liste de tokens OU None:
+    # Objectif : lire le texte caractère par caractère et reconnaître :
+    # - nombres (float)
+    # - fonctions "sqrt(" "abs(" "inv("
+    # - opérateurs et parenthèses
+    # - factorielle "!"
+    # - moins unaire -> token spécial "u-"
+
+    1) tokens = []
+    2) i = 0
+       n = len(expr)
+
+    3) fonction interne last_is_operator_or_open_paren() -> bool:
+           # sert uniquement à reconnaître le - unaire
+           SI tokens est vide => True
+           last = dernier token
+           retourner True si last est une string dans {"+","-","*","/","%","^","u-","("}
+           sinon False
+
+    4) TANT QUE i < n :
+           c = expr[i]
+
+           a) SI c est un espace :
+                 i += 1
+                 continuer
+
+           b) SI expr commence par "sqrt(" à la position i :
+                 tokens.append("sqrt")
+                 tokens.append("(")
+                 i += longueur("sqrt(")
+                 continuer
+
+              SI expr commence par "abs(" à la position i :
+                 tokens.append("abs")
+                 tokens.append("(")
+                 i += longueur("abs(")
+                 continuer
+
+              SI expr commence par "inv(" à la position i :
+                 tokens.append("inv")
+                 tokens.append("(")
+                 i += longueur("inv(")
+                 continuer
+
+           c) SI c est un chiffre OU c == "." :
+                 # on lit un nombre complet (avec max 1 point)
+                 j = i
+                 dot_count = 0
+                 TANT QUE j < n ET (expr[j] est chiffre OU expr[j] == "."):
+                      SI expr[j] == "." :
+                          dot_count += 1
+                          SI dot_count > 1 => retourner None
+                      j += 1
+
+                 part = expr[i:j]
+                 SI part == "." => retourner None
+
+                 essayer tokens.append(float(part))
+                 SI erreur => retourner None
+
+                 i = j
+                 continuer
+
+           d) SI c est "(" OU ")" :
+                 tokens.append(c)
+                 i += 1
+                 continuer
+
+           e) SI c == "!" :
+                 tokens.append("!")
+                 i += 1
+                 continuer
+
+           f) SI c est un opérateur dans {"+","-","*","/","%","^"} :
+                 SI c == "-" ET last_is_operator_or_open_paren() == True :
+                     # cas - unaire (ex: "-5", "(-3", "2*-4")
+                     tokens.append("u-")
+                 SINON :
+                     tokens.append(c)
+
+                 i += 1
+                 continuer
+
+           g) SINON :
+                 # caractère inconnu
+                 retourner None
+
+    5) retourner tokens
 
 
-fonction to_rpn(tokens):
-    output = liste vide
-    stack = pile vide
+"""
+3) precedence(op) et helpers
+"""
 
-    pour chaque token dans tokens:
+fonction precedence(op) -> int:
+    # priorité la plus haute = évaluée en premier
+    SI op == "!" => 5
+    SI op dans {"u-", "sqrt", "abs", "inv"} => 4
+    SI op == "^" => 3
+    SI op dans {"*", "/", "%"} => 2
+    SI op dans {"+", "-"} => 1
+    sinon 0
 
-        si token est un nombre:
-            ajouter token à output
+fonction is_right_associative(op) -> bool:
+    # associativité droite pour ^ et u-
+    retourner True si op dans {"^","u-"} sinon False
 
-        sinon si token est une fonction {"sqrt","abs","inv"}:
-            empiler token sur stack
+fonction is_operator(tok) -> bool:
+    retourner True si tok est une string dans {"+","-","*","/","%","^","u-","!"}
 
-        sinon si token est un opérateur (y compris "u-" et "!"):
-            tant que stack non vide ET stack.top est un opérateur OU une fonction:
-                top = stack.top
-
-                si precedence(top) > precedence(token):
-                    ajouter stack.pop à output
-                    continuer
-
-                si precedence(top) == precedence(token) ET is_right_associative(token) == False:
-                    ajouter stack.pop à output
-                    continuer
-
-                arrêter la boucle
-
-            empiler token sur stack
-
-        sinon si token == "(":
-            empiler "(" sur stack
-
-        sinon si token == ")":
-            tant que stack non vide ET stack.top != "(":
-                ajouter stack.pop à output
-            si stack vide:
-                retourner ERREUR (parenthèses)
-            dépiler "("
-            si stack.top est une fonction:
-                ajouter stack.pop à output
-
-        sinon:
-            retourner ERREUR
-
-    tant que stack non vide:
-        si stack.top est "(" ou ")":
-            retourner ERREUR
-        ajouter stack.pop à output
-
-    retourner output
+fonction is_function(tok) -> bool:
+    retourner True si tok est une string dans {"sqrt","abs","inv"}
 
 
+"""
+4) to_rpn(tokens)
+"""
 
-fonction eval_rpn(rpn):
-    stack = pile vide
+fonction to_rpn(tokens) -> liste RPN OU None:
+    # Objectif : convertir tokens vers une forme facile à calculer (RPN)
+    # RPN = on n’a plus besoin de parenthèses, on lit de gauche à droite avec pile
 
-    pour chaque token dans rpn:
+    1) output = []
+    2) stack = []   # pile de strings (opérateurs, parenthèses, fonctions)
 
-        si token est un nombre:
-            empiler valeur numérique(token)
+    3) POUR chaque tok dans tokens :
 
-        sinon si token == "u-":
-            si stack a moins de 1 élément: retourner (False, None, "BAD_UNARY_MINUS")
-            a = stack.pop
-            empiler (-a)
+         a) SI tok est un float :
+               output.append(tok)
+               continuer
 
-        sinon si token dans {"+","-","*","/","%","^"}:
-            si stack a moins de 2 éléments: retourner (False, None, "BAD_BINARY_OP")
-            b = stack.pop
-            a = stack.pop
+         b) SI tok est une fonction (sqrt/abs/inv) :
+               stack.append(tok)
+               continuer
 
-            si token == "+" : empiler (a + b)
-            si token == "-" : empiler (a - b)
-            si token == "*" : empiler (a * b)
+         c) SI tok est un opérateur (+-*/%^u-!) :
+               # On dépile tant que le haut de pile est prioritaire
+               TANT QUE stack n’est pas vide :
+                    top = stack[-1]
+                    SI top == "(" :
+                        arrêter
 
-            si token == "/":
-                si b == 0: retourner (False, None, "DIV_ZERO")
-                empiler (a / b)
+                    SI top est une fonction OU un opérateur :
+                        SI precedence(top) > precedence(tok) :
+                            output.append(stack.pop())
+                            continuer
 
-            si token == "%":
-                appeler mod_int(a, b) -> soit résultat, soit erreur
-                si erreur: retourner (False, None, "MOD_ERROR")
-                empiler résultat
+                        SI precedence(top) == precedence(tok) ET is_right_associative(tok) == False :
+                            output.append(stack.pop())
+                            continuer
 
-            si token == "^":
-                appeler pow_int(a, b) -> soit résultat, soit erreur
-                si erreur: retourner (False, None, "POW_EXP_NOT_INT")
-                empiler résultat
+                    arrêter
 
-        sinon si token == "!":
-            si stack a moins de 1 élément: retourner (False, None, "FACTORIAL_NO_ARG")
-            a = stack.pop
-            appeler factorial_int(a) -> soit résultat, soit erreur
-            si erreur: retourner (False, None, "FACTORIAL_NOT_INT")
-            empiler résultat
+               stack.append(tok)
+               continuer
 
-        sinon si token == "sqrt":
-            si stack a moins de 1 élément: retourner (False, None, "SQRT_NO_ARG")
-            a = stack.pop
-            appeler sqrt_newton(a)
-            si erreur: retourner (False, None, "SQRT_NEGATIVE")
-            empiler résultat
+         d) SI tok == "(" :
+               stack.append("(")
+               continuer
 
-        sinon si token == "abs":
-            si stack a moins de 1 élément: retourner (False, None, "ABS_NO_ARG")
-            a = stack.pop
-            empiler abs_value(a)
+         e) SI tok == ")" :
+               # On dépile jusqu'à trouver "("
+               found_open = False
+               TANT QUE stack n’est pas vide :
+                    top = stack.pop()
+                    SI top == "(" :
+                        found_open = True
+                        arrêter
+                    output.append(top)
 
-        sinon si token == "inv":
-            si stack a moins de 1 élément: retourner (False, None, "INV_NO_ARG")
-            a = stack.pop
-            si a == 0: retourner (False, None, "INV_ZERO")
-            empiler inv_value(a)
+               SI found_open == False :
+                    retourner None   # parenthèses incohérentes
 
-        sinon:
-            retourner (False, None, "UNKNOWN_TOKEN")
+               # si juste avant il y avait une fonction, on la met aussi dans output
+               SI stack non vide ET stack[-1] est une fonction :
+                    output.append(stack.pop())
 
-    si stack n’a pas exactement 1 élément:
-        retourner (False, None, "EVAL_ERROR")
+               continuer
 
-    retourner (True, stack.pop, None)
+         f) SINON :
+               retourner None
+
+    4) Fin de lecture : vider la pile
+       TANT QUE stack non vide :
+           top = stack.pop()
+           SI top est "(" OU ")" :
+               retourner None
+           output.append(top)
+
+    5) retourner output
+
+
+"""
+5) eval_rpn(rpn)
+"""
+
+fonction eval_rpn(rpn) -> (ok, value, error_code):
+    # Objectif : calculer la RPN avec une pile de nombres
+    # Règle : quand on voit un opérateur, on prend les valeurs sur la pile
+
+    1) stack = []  # pile de float
+
+    2) POUR chaque tok dans rpn :
+
+         a) SI tok est un float :
+               stack.append(tok)
+               continuer
+
+         b) SI tok == "u-" :
+               SI stack a moins de 1 valeur :
+                   retourner (False, None, "BAD_UNARY_MINUS")
+               a = stack.pop()
+               stack.append(-a)
+               continuer
+
+         c) SI tok est un opérateur binaire dans {"+","-","*","/","%","^"} :
+               SI stack a moins de 2 valeurs :
+                   retourner (False, None, "BAD_BINARY_OP")
+
+               b = stack.pop()
+               a = stack.pop()
+
+               SI tok == "+" : stack.append(a + b)
+               SI tok == "-" : stack.append(a - b)
+               SI tok == "*" : stack.append(a * b)
+
+               SI tok == "/" :
+                   SI b == 0 : retourner (False, None, "DIV_ZERO")
+                   stack.append(a / b)
+
+               SI tok == "%" :
+                   res = mod_int(a, b)
+                   SI res == None : retourner (False, None, "MOD_ERROR")
+                   stack.append(res)
+
+               SI tok == "^" :
+                   res = pow_int(a, b)
+                   SI res == None :
+                       SI a == 0 ET b < 0 :
+                           retourner (False, None, "POW_ZERO_NEG")
+                       retourner (False, None, "POW_EXP_NOT_INT")
+                   stack.append(res)
+
+               continuer
+
+         d) SI tok == "!" :
+               SI stack a moins de 1 valeur :
+                   retourner (False, None, "FACTORIAL_NO_ARG")
+               a = stack.pop()
+               res = factorial_int(a)
+               SI res == None :
+                   retourner (False, None, "FACTORIAL_NOT_INT")
+               stack.append(res)
+               continuer
+
+         e) SI tok == "sqrt" :
+               SI stack a moins de 1 valeur :
+                   retourner (False, None, "SQRT_NO_ARG")
+               a = stack.pop()
+               res = sqrt_newton(a)
+               SI res == None :
+                   retourner (False, None, "SQRT_NEGATIVE")
+               stack.append(res)
+               continuer
+
+         f) SI tok == "abs" :
+               SI stack a moins de 1 valeur :
+                   retourner (False, None, "ABS_NO_ARG")
+               a = stack.pop()
+               stack.append(abs_value(a))
+               continuer
+
+         g) SI tok == "inv" :
+               SI stack a moins de 1 valeur :
+                   retourner (False, None, "INV_NO_ARG")
+               a = stack.pop()
+               res = inv_value(a)
+               SI res == None :
+                   retourner (False, None, "INV_ZERO")
+               stack.append(res)
+               continuer
+
+         h) SINON :
+               retourner (False, None, "EVAL_ERROR")
+
+    3) À la fin, il doit rester EXACTEMENT 1 valeur
+       SI len(stack) != 1 :
+           retourner (False, None, "EVAL_ERROR")
+
+    4) retourner (True, stack[0], None)

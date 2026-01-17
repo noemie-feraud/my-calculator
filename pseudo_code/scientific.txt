@@ -1,69 +1,131 @@
-fonction abs_value(x):
-    si x >= 0: retourner x
-    sinon: retourner -x
+PS DU FICHIER : domain/scientific.py
+
+BUT :
+- Fournir des fonctions scientifiques "simples" sans utiliser le module math.
+- Si une opération n’est pas possible, on retourne None.
+  (Comme ça, le moteur peut transformer ça en code d’erreur propre.)
+
+RÈGLE GÉNÉRALE :
+- Retour normal : float (ou bool pour is_integer_value)
+- Retour impossible : None (pour inv, factorial, pow, sqrt, mod)
 
 
-fonction inv_value(x):
-    si x == 0:
-        retourner ERREUR
-    retourner 1 / x
+
+fonction abs_value(x: float) -> float:
+    # Valeur absolue (toujours possible)
+    SI x >= 0 :
+        retourner x
+    SINON :
+        retourner -x
 
 
-fonction factorial_int(x):
-    # x doit être entier >= 0
-    si x n’est pas entier:
-        retourner ERREUR
-    si x < 0:
-        retourner ERREUR
-
-    res = 1
-    i = 1
-    tant que i <= x:
-        res = res * i
-        i = i + 1
-
-    retourner res
+fonction inv_value(x: float) -> float OU None:
+    # Inverse 1/x
+    SI x == 0 :
+        retourner None    # impossible
+    SINON :
+        retourner 1.0 / x
 
 
-fonction pow_int(a, b):
-    # b doit être entier (positif ou négatif)
-    si b n’est pas entier:
-        retourner ERREUR
 
-    si b == 0:
-        retourner 1
-
-    si b < 0:
-        si a == 0:
-            retourner ERREUR
-        retourner 1 / pow_int(a, -b)
-
-    # exponentiation rapide (étudiant : boucle simple possible)
-    res = 1
-    i = 0
-    tant que i < b:
-        res = res * a
-        i = i + 1
-
-    retourner res
+fonction is_integer_value(x: float) -> bool:
+    # Vrai si x est exactement un entier
+    # exemple : 5.0 => True ; 5.2 => False
+    retourner (x == int(x))
 
 
-fonction sqrt_newton(x):
-    si x < 0:
-        retourner ERREUR
-    si x == 0:
-        retourner 0
 
-    guess = x
-    répéter 20 fois:
-        guess = (guess + x / guess) / 2
+fonction factorial_int(x: float) -> float OU None:
+    # Factorielle :
+    # - x doit être un entier exact
+    # - x doit être >= 0
+    # - on calcule avec une boucle (pas de récursion)
 
-    retourner guess
+    1) SI is_integer_value(x) == False :
+           retourner None
+
+    2) n = int(x)
+
+    3) SI n < 0 :
+           retourner None
+
+    4) res = 1
+       i = 1
+
+    5) TANT QUE i <= n :
+           res = res * i
+           i = i + 1
+
+    6) retourner float(res)
 
 
-fonction mod_int(a, b):
-    si b == 0:
-        retourner ERREUR
-    si a n’est pas entier OU b n’est pas entier:
-        retourner ERREUR
-    retourner reste de la division entière de a par b
+
+fonction pow_int(a: float, b: float) -> float OU None:
+    # Puissance a^b
+    # - b doit être un entier exact
+    # - gère b positif, nul, ou négatif
+    # - cas interdit : 0^négatif
+
+    1) SI is_integer_value(b) == False :
+           retourner None
+
+    2) n = int(b)
+
+    3) SI n == 0 :
+           retourner 1.0
+
+    4) SI n < 0 :
+           SI a == 0 :
+               retourner None    # 0 puissance négative impossible
+           pos = pow_int(a, float(-n))
+           SI pos est None OU pos == 0 :
+               retourner None
+           retourner 1.0 / pos
+
+    5) # Ici n > 0 : on fait des multiplications simples
+       res = 1.0
+       i = 0
+
+       TANT QUE i < n :
+           res = res * a
+           i = i + 1
+
+    6) retourner res
+
+
+
+fonction sqrt_newton(x: float, iterations: int = 25) -> float OU None:
+    # Racine carrée approximée (méthode de Newton)
+    # - si x < 0 => impossible
+    # - si x == 0 => 0 direct
+    # - sinon on itère 25 fois par défaut
+
+    1) SI x < 0 :
+           retourner None
+
+    2) SI x == 0 :
+           retourner 0.0
+
+    3) guess = x
+       i = 0
+
+    4) TANT QUE i < iterations :
+           guess = (guess + x / guess) / 2.0
+           i = i + 1
+
+    5) retourner guess
+
+
+
+fonction mod_int(a: float, b: float) -> float OU None:
+    # Modulo entier :
+    # - b != 0
+    # - a et b doivent être des entiers exacts
+
+    1) SI b == 0 :
+           retourner None
+
+    2) SI is_integer_value(a) == False OU is_integer_value(b) == False :
+           retourner None
+
+    3) retourner float(int(a) % int(b))

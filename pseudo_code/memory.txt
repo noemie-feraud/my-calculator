@@ -1,38 +1,77 @@
-fonction memory_clear(state):
-    state.memory_value = 0.0
-    state.message_text = "Mémoire effacée."
-    state.message_type = "info"
-    retourner state
+PS DU FICHIER : domain/memory.py
+
+BUT :
+- Simuler la mémoire d’une calculatrice :
+  MC : effacer la mémoire
+  MR : rappeler la mémoire (injecter un texte dans l’expression)
+  M+ : ajouter le dernier résultat à la mémoire
+  M- : soustraire le dernier résultat de la mémoire
+
+IMPORTANT :
+- La mémoire stockée = state.memory_value (un float)
+- M+ et M- utilisent state.last_result_value (le dernier résultat calculé)
+- MR retourne aussi une string "injected" (car on l’injecte comme si l’utilisateur tapait un nombre)
+- Le fichier ne calcule pas les expressions : il ne fait que gérer memory_value
 
 
-fonction memory_recall(state):
-    # renvoie le texte à injecter comme si c’était un nombre
-    injected = format_result(state.memory_value)
-    state.message_text = "Mémoire rappelée."
-    state.message_type = "info"
-    retourner (state, injected)
+
+fonction memory_clear(state: AppState) -> AppState:
+    # Objectif : remettre la mémoire à zéro
+
+    1) state.memory_value = 0.0
+
+    2) state.message_text = "Mémoire effacée."
+    3) state.message_type = "info"
+
+    4) retourner state
+
+fonction memory_recall(state: AppState) -> (AppState, str):
+    # Objectif : récupérer la mémoire sous forme de texte à injecter dans l’expression
+
+    1) injected = format_result(state.memory_value)
+       # format_result : convertit le float en texte propre
+       # ex : 3.0 -> "3", 2.500 -> "2.5"
+
+    2) state.message_text = "Mémoire rappelée."
+    3) state.message_type = "info"
+
+    4) retourner (state, injected)
 
 
-fonction memory_add(state):
-    # règle : si last_result existe, on l’utilise
-    si state.last_result_value est None:
-        state.message_text = "Impossible : aucun résultat à ajouter en mémoire."
-        state.message_type = "error"
-        retourner state
+fonction memory_add(state: AppState) -> AppState:
+    # Objectif : M+ (ajouter le dernier résultat à la mémoire)
 
-    state.memory_value = state.memory_value + state.last_result_value
-    state.message_text = "Ajouté à la mémoire."
-    state.message_type = "info"
-    retourner state
+    1) SI state.last_result_value est None ALORS
+           # Pas de résultat à ajouter
+           state.message_text = "Impossible : aucun résultat à ajouter en mémoire."
+           state.message_type = "error"
+           state.error_mode = True
+           retourner state
+
+    2) SINON
+           state.memory_value = state.memory_value + state.last_result_value
+
+           state.message_text = "Ajouté à la mémoire."
+           state.message_type = "info"
+
+           retourner state
 
 
-fonction memory_sub(state):
-    si state.last_result_value est None:
-        state.message_text = "Impossible : aucun résultat à soustraire de la mémoire."
-        state.message_type = "error"
-        retourner state
 
-    state.memory_value = state.memory_value - state.last_result_value
-    state.message_text = "Soustrait de la mémoire."
-    state.message_type = "info"
-    retourner state
+fonction memory_sub(state: AppState) -> AppState:
+    # Objectif : M- (soustraire le dernier résultat de la mémoire)
+
+    1) SI state.last_result_value est None ALORS
+           # Pas de résultat à soustraire
+           state.message_text = "Impossible : aucun résultat à soustraire de la mémoire."
+           state.message_type = "error"
+           state.error_mode = True
+           retourner state
+
+    2) SINON
+           state.memory_value = state.memory_value - state.last_result_value
+
+           state.message_text = "Soustrait de la mémoire."
+           state.message_type = "info"
+
+           retourner state

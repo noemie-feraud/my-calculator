@@ -1,20 +1,53 @@
-fonction create_initial_state():
-    # objectif : créer un état initial cohérent pour éviter les variables globales
+PS DU FICHIER : models/app_state.py
 
-    state.expression_text = ""
-    state.display_text = ""
-    state.message_text = ""
-    state.message_type = ""                # "info" ou "error" ou ""
+BUT DU FICHIER :
+- Regrouper tout l’état de l’application (ce que l’utilisateur tape, ce qu’on affiche, messages, etc.)
+- Éviter d’avoir des variables globales partout
+- Avoir un objet unique (AppState) que l’UI et le contrôleur peuvent lire/modifier
 
-    state.error_mode = False
-    state.after_result = False
-    state.recall_history = False
-    state.mode_scientifique = False
 
-    state.last_result_value = None
-    state.last_result_text = ""
+"""
+DATACLASS AppState
+"""
 
-    state.history_items = liste vide       # liste de HistoryItem
-    state.memory_value = 0.0
+classe AppState:
+    # 1) Texte en cours de saisie (expression construite par les boutons)
+    expression_text = ""    # exemple : "12+3"
 
-    retourner state
+    # 2) Texte affiché dans l’écran (souvent identique à expression_text)
+    display_text = ""
+
+    # 3) Zone message (info / erreur)
+    message_text = ""
+    message_type = ""       # "info" ou "error" ou ""
+
+    # 4) Flags (petits indicateurs utiles pour le comportement de l’appli)
+    error_mode = False          # True si on est en erreur
+    after_result = False        # True si le dernier affichage est un résultat (= vient d’être fait)
+    recall_history = False      # True si on vient de rappeler un item d’historique
+    mode_scientifique = False   # True si le clavier scientifique est affiché
+
+    # 5) Dernier résultat calculé
+    last_result_value = None    # float ou None
+    last_result_text = ""       # version texte du résultat (ex: "3.5")
+
+    # 6) Historique et mémoire
+    history_items = liste vide (de HistoryItem)
+    memory_value = 0.0          # mémoire de calcul (type "M+" / "MR")
+
+
+REMARQUE IMPORTANTE (pour comprendre le code) :
+- Ici, chaque champ a déjà une valeur par défaut.
+- Donc quand on crée AppState(), tout est déjà initialisé correctement.
+- Pour history_items, on utilise default_factory=list pour avoir une nouvelle liste vide à chaque fois.
+
+
+"""
+FONCTION create_initial_state()
+"""
+
+fonction create_initial_state() -> AppState:
+    # Objectif : fournir un état “propre” au démarrage de l’application
+
+    1) retourner AppState()
+       # (AppState() met déjà toutes les valeurs par défaut automatiquement)
