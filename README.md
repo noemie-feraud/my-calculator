@@ -16,6 +16,10 @@ Objectifs du projet : une appli **simple à expliquer**, robuste côté erreurs,
 - Décimaux : `.`
 - Priorités respectées : parenthèses → `* / %` → `+ -` (+ gestion de `^`)
 
+## Aperçu 
+
+![Interface - mode standard](assets/Screenshot1.png)
+
 ### Scientifique (bouton **SCI**)
 - `sqrt(x)` (affiché `√`) : racine carrée (méthode numérique, sans `math`)
 - `abs(x)` (affiché `|x|`) : valeur absolue
@@ -25,6 +29,9 @@ Objectifs du projet : une appli **simple à expliquer**, robuste côté erreurs,
 - `%` : modulo (**entiers uniquement**, diviseur non nul)
 - `!` : factorielle (**postfix**, entier ≥ 0)
 
+## Aperçu 
+
+![Interface - mode scientifique](assets/Screenshot2.png)
 
 ### Historique & mémoire
 
