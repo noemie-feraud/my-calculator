@@ -131,6 +131,9 @@ Si tu tapes un **opérateur** après `=` → continue le calcul à partir du der
 * **history_item.py**      # modèle item d’historique
 * **test_.py**             # tests unitaires
 
+## UML (Orchestration)
+
+![Les flux d'appels](assets/MAIN.svg)
 
 ### Tests
 
