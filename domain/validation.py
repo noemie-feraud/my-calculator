@@ -1,13 +1,13 @@
 """
 domain/validation.py
 
-But :
-- Valider ce que l'utilisateur fait AU MOMENT DU CLIC.
-- Puis valider "finalement" au moment de "=".
+Goal:
+- Validate what the user does AT CLICK TIME.
+- Then validate "finally" when "=" is pressed.
 
-Important :
-- Clic uniquement (les tokens viennent des boutons).
-- On valide "tôt" pour éviter des expressions impossibles.
+Important:
+- Clicks only (tokens come from buttons).
+- We validate early to prevent impossible expressions.
 """
 
 from typing import Tuple, Optional
@@ -16,7 +16,7 @@ MAX_LEN = 80
 
 
 def parentheses_balance(expr: str) -> int:
-    """Nombre de '(' non fermées. Si on ferme trop, on renvoie -999."""
+    """Number of unclosed '(' parentheses. If we close too many, return -999."""
     count = 0
     for c in expr:
         if c == "(":
@@ -38,8 +38,8 @@ def is_operator_char(c: str) -> bool:
 
 def current_number_fragment(expr: str) -> str:
     """
-    Récupère la fin du nombre en cours.
-    Exemple : "12.3+45.6" -> "45.6"
+    Get the tail of the current number.
+    Example: "12.3+45.6" -> "45.6"
     """
     i = len(expr) - 1
     frag = ""
@@ -55,11 +55,11 @@ def current_number_fragment(expr: str) -> str:
 
 def validate_button_action(expr: str, token: str) -> Tuple[bool, Optional[str]]:
     """
-    Validation "temps réel" sur un clic.
+    "Real-time" validation for a click.
 
-    token peut être :
-    - un chiffre ("0".."9")
-    - un opérateur (+ - * / % ^)
+    token can be:
+    - a digit ("0".."9")
+    - an operator (+ - * / % ^)
     - "." "(" ")"
     - "sqrt(" "abs(" "inv("
     - "!" (postfix)
@@ -67,13 +67,13 @@ def validate_button_action(expr: str, token: str) -> Tuple[bool, Optional[str]]:
     if len(expr) >= MAX_LEN:
         return False, "MAX_LEN"
 
-    # Fonctions scientifiques (token complet)
+    # Scientific functions (full token)
     if token in {"sqrt(", "abs(", "inv("}:
         if expr and (last_char(expr).isdigit() or last_char(expr) == ")"):
             return False, "MISSING_OPERATOR_BEFORE_FUNCTION"
         return True, None
 
-    # Factorielle postfix
+    # Factorial postfix
     if token == "!":
         if not expr:
             return False, "FACTORIAL_NO_ARG"
@@ -82,7 +82,7 @@ def validate_button_action(expr: str, token: str) -> Tuple[bool, Optional[str]]:
             return False, "FACTORIAL_BAD_POS"
         return True, None
 
-    # Parenthèses
+    # Parentheses
     if token == "(":
         if expr and (last_char(expr).isdigit() or last_char(expr) == ")"):
             return False, "MISSING_OPERATOR_BEFORE_PAREN"
@@ -99,7 +99,7 @@ def validate_button_action(expr: str, token: str) -> Tuple[bool, Optional[str]]:
             return False, "CLOSE_PAREN_AFTER_OPERATOR"
         return True, None
 
-    # Point
+    # Decimal point
     if token == ".":
         if not expr:
             return False, "DOT_START"
@@ -111,7 +111,7 @@ def validate_button_action(expr: str, token: str) -> Tuple[bool, Optional[str]]:
             return False, "DOUBLE_DOT"
         return True, None
 
-    # Chiffres
+    # Digits
     if token.isdigit():
         if expr:
             frag = current_number_fragment(expr)
@@ -119,7 +119,7 @@ def validate_button_action(expr: str, token: str) -> Tuple[bool, Optional[str]]:
                 return False, "LEADING_ZERO"
         return True, None
 
-    # Opérateurs sauf '-'
+    # Operators except '-'
     if token in {"+", "*", "/", "%", "^"}:
         if not expr:
             return False, "OP_START"
@@ -130,7 +130,7 @@ def validate_button_action(expr: str, token: str) -> Tuple[bool, Optional[str]]:
             return False, "OP_AFTER_OPEN_PAREN"
         return True, None
 
-    # '-' : peut être unaire ou binaire
+    # '-' : Can be unary or binary
     if token == "-":
         if not expr:
             return True, None
@@ -143,7 +143,7 @@ def validate_button_action(expr: str, token: str) -> Tuple[bool, Optional[str]]:
 
 
 def validate_expression_final(expr: str) -> Tuple[bool, Optional[str]]:
-    """Validation finale au moment de '='."""
+    """Final validation when '=' is pressed"""
     if not expr:
         return False, "EMPTY_EXPR"
 

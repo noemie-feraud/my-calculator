@@ -1,11 +1,11 @@
 """
 models/history_item.py
 
-But :
-- Une ligne d'historique doit avoir :
-  - l'expression
-  - le résultat affichable
-  - la valeur numérique réelle (float)
+Goal:
+- A history line must have:
+  - the expression
+  - the displayable result
+  - the real numeric value (float)
 """
 
 from dataclasses import dataclass
@@ -19,5 +19,5 @@ class HistoryItem:
 
 
 def create_history_item(expr: str, result_text: str, result_value: float) -> HistoryItem:
-    """Crée une entrée d'historique."""
+    """Create a history entry"""
     return HistoryItem(expr=expr, result_text=result_text, result_value=result_value)

@@ -1,13 +1,14 @@
 """
 controller/app_controller.py
 
-But :
-- Recevoir les clics des boutons
-- Appliquer le "pipeline" :
-  validation -> moteur -> formatage -> historique/mémoire -> mise à jour état -> rendu UI
+Goal:
 
-- une fonction par bouton / type d'action
-- des helpers simples
+- Receive button clicks
+- Apply the "pipeline":
+validation -> engine -> formatting -> history/memory -> state update -> UI rendering
+
+- one function per button / action type
+- simple helper functions
 """
 
 from models.app_state import AppState, create_initial_state
@@ -24,39 +25,38 @@ class AppController:
     def __init__(self, initial_state: AppState, ui) -> None:
         self.state = initial_state
         self.ui = ui
-
-    # ----------------------
-    # Helpers (petites fonctions pratiques)
-    # ----------------------
+ 
+    # Helpers (Handy little functions)
 
     def _render(self) -> None:
-        """Affiche l'état dans l'UI."""
+        """Display the state in the UI."""
         self.ui.render(self.state)
-        # Important : l'historique est recréé à chaque render, donc on rebinde
+        # Important: the history is recreated on each render, so we rebind.
         self.ui.bind_history_clicks(self)
 
     def _set_error(self, code: str) -> None:
-        """Met l'état en mode erreur."""
+        """Set the state to error mode."""
         self.state.message_text = get_message(code)
         self.state.message_type = "error"
         self.state.error_mode = True
 
     def _set_info(self, text: str) -> None:
-        """Met un message d'info simple."""
+        """Set a simple info message."""
         self.state.message_text = text
         self.state.message_type = "info"
         self.state.error_mode = False
 
     def _clear_message(self) -> None:
-        """Efface message."""
+        """Delete message."""
         self.state.message_text = ""
         self.state.message_type = ""
 
     def _clear_entry_keep_history_memory(self) -> None:
         """
-        Bouton C : efface juste l'expression et les messages.
-        Ne touche pas à l'historique ni à la mémoire.
+        Button C: clears only the expression and the messages.
+        Does not touch the history or the memory.
         """
+
         self.state.expression_text = ""
         self.state.display_text = ""
         self._clear_message()
@@ -66,9 +66,10 @@ class AppController:
 
     def _append_token(self, token: str) -> bool:
         """
-        Ajoute un token à l'expression après validation.
-        Retourne True si OK, False si erreur.
+        Add a token to the expression after validation.
+        Return True if OK, False if error.
         """
+
         ok, err = validate_button_action(self.state.expression_text, token)
         if not ok:
             self._set_error(err or "UNKNOWN_TOKEN")
@@ -83,10 +84,11 @@ class AppController:
 
     def _append_chars_as_clicks(self, text: str) -> bool:
         """
-        Pour injecter un nombre (ex: MR) on simule "clic par clic" :
-        on ajoute chaque caractère comme si c'était un bouton.
-        Exemple : "-12.5" -> '-', '1', '2', '.', '5'
+        To inject a number (e.g., MR), we simulate it "click by click":
+        we add each character as if it were a button.
+        Example: "-12.5" -> '-', '1', '2', '.', '5'
         """
+
         for ch in text:
             if ch == "-":
                 if not self._append_token("-"):
@@ -98,21 +100,19 @@ class AppController:
                 if not self._append_token("."):
                     return False
             else:
-                # normalement on ne doit pas avoir d'autres caractères dans MR
+                # normally we shouldn't have any other characters in MR
                 self._set_error("UNKNOWN_TOKEN")
                 return False
         return True
 
-    # ----------------------
-    # Handlers boutons (clics)
-    # ----------------------
+    # Button handlers (clicks)
 
     def handle_digit(self, digit: str) -> None:
-        """Boutons 0..9"""
+        """Buttons 0..9"""
         if self.state.error_mode:
             self._clear_entry_keep_history_memory()
 
-        # si on avait un résultat et on tape un chiffre -> nouvelle expression
+        # If we had a result and we type a digit -> start a new expression
         if self.state.after_result:
             self._clear_entry_keep_history_memory()
 
@@ -125,7 +125,7 @@ class AppController:
             self._render()
             return
 
-        # après résultat : on peut enchaîner "résultat + ..."
+        # After a result: we can continue with "result + ..."
         if self.state.after_result:
             if not self.state.last_result_text:
                 self._set_error("NO_LAST_RESULT")
@@ -139,7 +139,7 @@ class AppController:
         self._render()
 
     def handle_decimal(self) -> None:
-        """Bouton '.'"""
+        """Button '.'"""
         if self.state.error_mode:
             self._render()
             return
@@ -147,12 +147,12 @@ class AppController:
         self._render()
 
     def handle_parenthesis(self, par: str) -> None:
-        """Bouton '(' ou ')'"""
+        """Button '(' or ')'"""
         if self.state.error_mode:
             self._render()
             return
 
-        # après résultat : si on ouvre une parenthèse, on recommence
+        # After a result: if we open a parenthesis, we start over
         if self.state.after_result and par == "(":
             self._clear_entry_keep_history_memory()
 
@@ -161,18 +161,18 @@ class AppController:
 
     def handle_scientific_token(self, token: str) -> None:
         """
-        Tokens scientifiques :
+        Scientific tokens:
         - "sqrt(" "abs(" "inv("
         - "^" "%"
         - "!" postfix
-        - "^2" "^3" => on transforme en clics simples : '^' puis '2' / '3'
+        - "^2" "^3" => we convert into simple clicks: '^' then '2' / '3'
         """
         if self.state.error_mode:
             self._render()
             return
 
         if token == "^2":
-            # simple et explicable : on fait comme si l'utilisateur clique '^' puis '2'
+            # Simple and easy to explain: we act as if the user clicks '^' then '2'
             ok1 = self._append_token("^")
             ok2 = self._append_token("2") if ok1 else False
             self._render()
@@ -184,12 +184,12 @@ class AppController:
             self._render()
             return
 
-        # fonctions "sqrt(" etc : token complet (validation le gère)
+        # Functions like "sqrt(" etc.: full token (validation handles it)
         self._append_token(token)
         self._render()
 
     def handle_backspace(self) -> None:
-        """Bouton ⌫"""
+        """Button ⌫"""
         if self.state.error_mode:
             self._clear_entry_keep_history_memory()
             self._render()
@@ -205,12 +205,12 @@ class AppController:
         self._render()
 
     def handle_clear(self) -> None:
-        """Bouton C : effacer l'expression"""
+        """Button C: clear the expression."""
         self._clear_entry_keep_history_memory()
         self._render()
 
     def handle_equals(self) -> None:
-        """Bouton = : validation finale puis calcul"""
+        """Button = : final validation, then compute."""
         if self.state.error_mode:
             self._render()
             return
@@ -229,17 +229,17 @@ class AppController:
             self._render()
             return
 
-        # formatage affichage
+        # Display formatting
         result_text = format_result(value)
 
-        # mise à jour last_result
+        # update last_result
         self.state.last_result_value = value
         self.state.last_result_text = result_text
 
-        # ajout historique
+        # Add history
         self.state = history_add(self.state, expr, result_text, value)
 
-        # affichage du résultat
+        # Display result
         self.state.expression_text = result_text
         self.state.display_text = result_text
         self.state.after_result = True
@@ -249,12 +249,12 @@ class AppController:
         self._render()
 
     def handle_history_click(self, index: int) -> None:
-        """Clique sur un élément d'historique"""
+        """Click on a history item."""
         self.state, _ = history_select(self.state, index)
         self._render()
 
     def handle_history_clear(self) -> None:
-        """Effacer historique"""
+        """Delete history"""
         self.state = history_clear(self.state)
         self._render()
 
@@ -270,14 +270,14 @@ class AppController:
         if action == "MR":
             self.state, injected = memory_recall(self.state)
 
-            # On injecte la mémoire comme des "clics"
-            # Règle simple : si after_result True, on recommence une expression
+            # We inject the memory as "clicks""
+            # Simple rule: if after_result is True, we start a new expression.
             if self.state.after_result:
                 self._clear_entry_keep_history_memory()
 
             ok = self._append_chars_as_clicks(injected)
             if not ok:
-                # l'erreur est déjà posée
+                # The error is already set.
                 pass
 
             self._render()
@@ -293,16 +293,16 @@ class AppController:
             self._render()
             return
 
-        # action inconnue
+        # Unknown action.
         self._set_error("UNKNOWN_TOKEN")
         self._render()
 
     def toggle_scientific_mode(self) -> None:
-        """Bouton SCI : afficher/masquer le clavier scientifique"""
+        """SCI button: show/hide the scientific keypad."""
         self.state.mode_scientifique = not self.state.mode_scientifique
         self._render()
 
     def handle_reset_all(self) -> None:
-        """Bouton AC : reset total (état initial complet)"""
+        """AC button: full reset (back to the complete initial state)."""
         self.state = create_initial_state()
         self._render()

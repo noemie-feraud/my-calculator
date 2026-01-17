@@ -1,15 +1,15 @@
 """
 models/errors.py
 
-But :
-- Centraliser les messages d'erreur.
-- Comme ça, on ne met pas des "strings" partout dans le code.
+Goal:
+- Centralize error messages.
+- That way, we don't scatter "strings" all over the code.
 """
 
 from typing import Dict, Optional, Any
 
 ERROR_MESSAGES: Dict[str, str] = {
-    # Validation générale
+    # General validation
     "EMPTY_EXPR": "Entrez une expression avant de calculer.",
     "MAX_LEN": "Expression trop longue.",
     "UNKNOWN_TOKEN": "Saisie invalide.",
@@ -30,7 +30,7 @@ ERROR_MESSAGES: Dict[str, str] = {
     "FACTORIAL_BAD_POS": "Factorielle : position invalide.",
     "NO_LAST_RESULT": "Aucun résultat précédent disponible.",
 
-    # Moteur / calcul
+    # Engine / computation
     "TOKEN_ERROR": "Erreur de lecture de l'expression.",
     "PARSE_ERROR": "Erreur de parsing (priorités/parenthèses).",
     "EVAL_ERROR": "Erreur lors du calcul.",
@@ -38,7 +38,7 @@ ERROR_MESSAGES: Dict[str, str] = {
     "BAD_BINARY_OP": "Expression invalide (opérateur binaire).",
     "BAD_UNARY_MINUS": "Expression invalide (moins unaire).",
 
-    # Scientifique
+    # Scientific
     "POW_EXP_NOT_INT": "Puissance : l'exposant doit être un entier.",
     "POW_ZERO_NEG": "Puissance : 0 exposant négatif est impossible.",
     "SQRT_NEGATIVE": "Racine carrée impossible sur un nombre négatif.",
@@ -53,8 +53,8 @@ ERROR_MESSAGES: Dict[str, str] = {
 
 def get_message(code: str, context: Optional[Dict[str, Any]] = None) -> str:
     """
-    Retourne le message associé à un code.
-    context sert si on veut remplacer des variables dans le message.
+    Return the message associated with a code.
+    context is used if we want to replace variables in the message.
     """
     msg = ERROR_MESSAGES.get(code, "Erreur inconnue.")
     if context:

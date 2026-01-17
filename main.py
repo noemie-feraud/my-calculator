@@ -1,13 +1,13 @@
 """
 main.py
-Point d'entrée de l'application.
+Application entry point.
 
-Ici on ne fait PAS de calcul.
-On crée :
-- l'état initial
-- l'UI
-- le controller
-Puis on branche les boutons et on lance la fenêtre.
+We do NOT perform any calculations here.
+We create:
+- the initial state
+- the UI
+- the controller
+Then we bind the buttons and launch the window.
 """
 
 from models.app_state import create_initial_state
@@ -16,20 +16,20 @@ from controller.app_controller import AppController
 
 
 def main() -> None:
-    """Démarre l'app."""
+    """Start the app"""
     state = create_initial_state()
 
     ui = AppView()
     controller = AppController(initial_state=state, ui=ui)
 
-    # On branche UNIQUEMENT les boutons (clics), pas le clavier du PC
+    # We bind ONLY the buttons (clicks), not the PC keyboard
     ui.bind_buttons(controller)
 
-    # Premier affichage
+    # First display
     ui.render(controller.state)
-    ui.bind_history_clicks(controller)  # l'historique est vide au début, mais on garde la logique
+    ui.bind_history_clicks(controller)  # The history is empty at the beginning, but we keep the logic
 
-    # Boucle principale (fenêtre)
+    # Main loop (window)
     ui.mainloop()
 
 

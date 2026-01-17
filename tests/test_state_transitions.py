@@ -24,7 +24,7 @@ class TestStateTransitions(unittest.TestCase):
 
         self.assertTrue(ctl.state.after_result)
 
-        # un chiffre après résultat -> doit repartir sur une nouvelle expression
+        # A digit after a result -> should start a new expression
         ctl.handle_digit("9")
         self.assertEqual(ctl.state.expression_text, "9")
 

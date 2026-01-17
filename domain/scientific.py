@@ -1,35 +1,35 @@
 """
 domain/scientific.py
 
-But :
-- Fonctions scientifiques SANS module math.
-- On renvoie None si impossible (ça aide à gérer les erreurs).
+Goal:
+- Scientific functions WITHOUT the math module.
+- Return None if impossible (helps with error handling).
 """
 
 from typing import Optional
 
 
 def abs_value(x: float) -> float:
-    """Valeur absolue."""
+    """Absolute value"""
     return x if x >= 0 else -x
 
 
 def inv_value(x: float) -> Optional[float]:
-    """Inverse 1/x. None si x == 0."""
+    """Reciprocal 1/x. None if x == 0"""
     if x == 0:
         return None
     return 1.0 / x
 
 
 def is_integer_value(x: float) -> bool:
-    """Vrai si x est exactement un entier (ex: 5.0)."""
+    """True if x is exactly an integer (e.g., 5.0)"""
     return x == int(x)
 
 
 def factorial_int(x: float) -> Optional[float]:
     """
-    Factorielle :
-    - entier
+    Factorial :
+    - integer
     - >= 0
     """
     if not is_integer_value(x):
@@ -48,9 +48,9 @@ def factorial_int(x: float) -> Optional[float]:
 
 def pow_int(a: float, b: float) -> Optional[float]:
     """
-    Puissance a^b avec b entier.
-    - None si b non entier
-    - None si 0^négatif
+    Power a^b with integer b.
+    - None if b is not an integer
+    - None if 0^negative
     """
     if not is_integer_value(b):
         return None
@@ -78,8 +78,8 @@ def pow_int(a: float, b: float) -> Optional[float]:
 
 def sqrt_newton(x: float, iterations: int = 25) -> Optional[float]:
     """
-    Racine carrée approximée par Newton.
-    - None si x < 0
+    Square root approximated using Newton's method.
+    - None if x < 0
     """
     if x < 0:
         return None
@@ -97,7 +97,7 @@ def sqrt_newton(x: float, iterations: int = 25) -> Optional[float]:
 def mod_int(a: float, b: float) -> Optional[float]:
     """
     Modulo :
-    - a et b entiers
+    - a and b integers
     - b != 0
     """
     if b == 0:

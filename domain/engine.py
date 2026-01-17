@@ -1,22 +1,22 @@
 """
 domain/engine.py
 
-But :
-- Évaluer une expression en texte SANS eval() et SANS math.
+Goal:
+- Evaluate a text expression WITHOUT eval() and WITHOUT math.
 
-Méthode (classique + expliquable) :
-1) tokenize : transforme "2+3*4" -> [2.0, '+', 3.0, '*', 4.0]
-   - supporte : sqrt( abs( inv( !
-   - supporte : moins unaire (token "u-")
-2) to_rpn : shunting-yard -> notation polonaise inversée
-3) eval_rpn : calcule la pile
+Method (classic + easy to explain):
+1) tokenize: turns "2+3*4" -> [2.0, '+', 3.0, '*', 4.0]
+   - supports: sqrt( abs( inv( !
+   - supports: unary minus (token "u-")
+2) to_rpn: shunting-yard -> Reverse Polish Notation (RPN)
+3) eval_rpn: computes the stack
 
-Opérations supportées :
+Supported operations:
 - + - * / % ^
-- parenthèses
-- u- (moins unaire)
+- parentheses
+- u- (unary minus)
 - sqrt, abs, inv
-- ! (factorielle postfix)
+- ! (postfix factorial)
 """
 
 from typing import List, Tuple, Union, Optional
@@ -27,7 +27,7 @@ Token = Union[str, float]
 
 def evaluate_expression(expr: str) -> Tuple[bool, Optional[float], Optional[str]]:
     """
-    Retourne (success, value, error_code).
+    Returns (success, value, error_code).
     """
     tokens = tokenize(expr)
     if tokens is None:
@@ -46,14 +46,14 @@ def evaluate_expression(expr: str) -> Tuple[bool, Optional[float], Optional[str]
 
 def tokenize(expr: str) -> Optional[List[Token]]:
     """
-    Lit l'expression caractère par caractère.
-    Reconnaît :
-    - nombres (float)
-    - opérateurs
-    - parenthèses
+    Read the expression character by character.
+    Recognizes:
+    - numbers (float)
+    - operators
+    - parentheses
     - sqrt( abs( inv(
-    - ! postfix
-    - moins unaire "u-"
+    - postfix !
+    - unary minus "u-"
     """
     tokens: List[Token] = []
     i = 0
@@ -72,7 +72,7 @@ def tokenize(expr: str) -> Optional[List[Token]]:
             i += 1
             continue
 
-        # fonctions
+        # functions
         if expr.startswith("sqrt(", i):
             tokens.append("sqrt")
             tokens.append("(")
@@ -91,7 +91,7 @@ def tokenize(expr: str) -> Optional[List[Token]]:
             i += len("inv(")
             continue
 
-        # nombre (avec point)
+        # Number (with a decimal point)
         if c.isdigit() or c == ".":
             j = i
             dot_count = 0
@@ -114,19 +114,19 @@ def tokenize(expr: str) -> Optional[List[Token]]:
             i = j
             continue
 
-        # parenthèses
+        # parentheses
         if c in {"(", ")"}:
             tokens.append(c)
             i += 1
             continue
 
-        # factorielle
+        # factorial
         if c == "!":
             tokens.append("!")
             i += 1
             continue
 
-        # opérateurs
+        # opérators
         if c in {"+", "-", "*", "/", "%", "^"}:
             if c == "-" and last_is_operator_or_open_paren():
                 tokens.append("u-")
@@ -135,14 +135,14 @@ def tokenize(expr: str) -> Optional[List[Token]]:
             i += 1
             continue
 
-        # inconnu
+        # unknown
         return None
 
     return tokens
 
 
 def precedence(op: str) -> int:
-    """Priorités."""
+    """Priorities"""
     if op == "!":
         return 5
     if op in {"u-", "sqrt", "abs", "inv"}:
@@ -157,7 +157,7 @@ def precedence(op: str) -> int:
 
 
 def is_right_associative(op: str) -> bool:
-    """Associativité droite pour ^ et u-."""
+    """Right associativity for ^ and u-"""
     return op in {"^", "u-"}
 
 
@@ -221,7 +221,7 @@ def to_rpn(tokens: List[Token]) -> Optional[List[Token]]:
             if not found_open:
                 return None
 
-            # si une fonction est juste avant, on la met dans output
+            # If a function is right before it, we put it into the output.
             if stack and is_function(stack[-1]):
                 output.append(stack.pop())
 
@@ -229,7 +229,7 @@ def to_rpn(tokens: List[Token]) -> Optional[List[Token]]:
 
         return None
 
-    # vider la pile
+    # Clear the stack
     while stack:
         top = stack.pop()
         if top in {"(", ")"}:
@@ -241,7 +241,7 @@ def to_rpn(tokens: List[Token]) -> Optional[List[Token]]:
 
 def eval_rpn(rpn: List[Token]) -> Tuple[bool, Optional[float], Optional[str]]:
     """
-    Évalue une RPN avec une pile.
+    Evaluate an RPN expression using a stack.
     """
     stack: List[float] = []
 
@@ -250,7 +250,7 @@ def eval_rpn(rpn: List[Token]) -> Tuple[bool, Optional[float], Optional[str]]:
             stack.append(tok)
             continue
 
-        # moins unaire
+        # unary minus
         if tok == "u-":
             if len(stack) < 1:
                 return False, None, "BAD_UNARY_MINUS"
@@ -258,7 +258,7 @@ def eval_rpn(rpn: List[Token]) -> Tuple[bool, Optional[float], Optional[str]]:
             stack.append(-a)
             continue
 
-        # opérateurs binaires
+        # Binary operators
         if tok in {"+", "-", "*", "/", "%", "^"}:
             if len(stack) < 2:
                 return False, None, "BAD_BINARY_OP"
@@ -289,7 +289,7 @@ def eval_rpn(rpn: List[Token]) -> Tuple[bool, Optional[float], Optional[str]]:
                 stack.append(res)
             continue
 
-        # factorielle
+        # factorial
         if tok == "!":
             if len(stack) < 1:
                 return False, None, "FACTORIAL_NO_ARG"
@@ -300,7 +300,7 @@ def eval_rpn(rpn: List[Token]) -> Tuple[bool, Optional[float], Optional[str]]:
             stack.append(res)
             continue
 
-        # fonctions
+        # functions
         if tok == "sqrt":
             if len(stack) < 1:
                 return False, None, "SQRT_NO_ARG"

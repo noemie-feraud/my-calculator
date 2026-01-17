@@ -1,1 +1,1 @@
-# Package models : contient les structures de données (AppState, HistoryItem, erreurs)
+# models package: contains the data structures (AppState, HistoryItem, errors)
